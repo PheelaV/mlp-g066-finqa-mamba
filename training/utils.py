@@ -7,19 +7,19 @@ template_dict = {
 }
 
 # A dictionary to store the LoRA module mapping for different models.
-# lora_module_dict = {
-#     'chatglm2': ['query_key_value'],
-#     'falcon': ['query_key_value'],
-#     'bloom': ['query_key_value'],
-#     'internlm': ['q_proj', 'k_proj', 'v_proj'],
-#     'llama2': ['q_proj', 'k_proj', 'v_proj'],
-#     'llama2-13b': ['q_proj', 'k_proj', 'v_proj'],
-#     'llama2-13b-nr': ['q_proj', 'k_proj', 'v_proj'],
-#     'qwen': ["c_attn"],
-#     'mpt': ['Wqkv'],
-#     'baichuan': ['q_proj', 'k_proj', 'v_proj'],
-# }
-
+lora_module_dict = {
+    # 'chatglm2': ['query_key_value'],
+    # 'falcon': ['query_key_value'],
+    # 'bloom': ['query_key_value'],
+    # 'internlm': ['q_proj', 'k_proj', 'v_proj'],
+    # 'llama2': ['q_proj', 'k_proj', 'v_proj'],
+    # 'llama2-13b': ['q_proj', 'k_proj', 'v_proj'],
+    # 'llama2-13b-nr': ['q_proj', 'k_proj', 'v_proj'],
+    # 'qwen': ["c_attn"],
+    # 'mpt': ['Wqkv'],
+    # 'baichuan': ['q_proj', 'k_proj', 'v_proj'],
+    'mamba': ["x_proj", "embeddings", "in_proj", "out_proj"]
+}
 
 def get_prompt(template, instruction, input_text):
     """
@@ -161,7 +161,9 @@ def parse_model_name(name, from_remote=False):
         # 'mpt': ('cekal/mpt-7b-peft-compatible', 'base_models/mpt-7b-peft-compatible'),
         # 'bloom': ('bigscience/bloom-7b1', 'base_models/bloom-7b1'),
         'mamba-small': ('state-spaces/mamba-130m-hf', 'base_models/mamba-130m-hf'),
-        'pythia-small': ('EleutherAI/pythia-70m-deduped', 'base_models/pythia-70m-deduped')
+        'pythia-small': ('EleutherAI/pythia-70m-deduped', 'base_models/pythia-70m-deduped'),
+        'mamba-big': ('state-spaces/mamba-2.8b-hf', 'base_models/mamba-2.8b-hf'),
+        'pythia-big': ('EleutherAI/pythia-2.8b-deduped', 'base_models/pythia-2.8b-deduped')
     }
 
     if name in model_paths:

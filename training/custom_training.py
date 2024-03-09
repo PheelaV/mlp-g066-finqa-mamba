@@ -7,7 +7,7 @@ import os
 from transformers import DataCollatorForSeq2Seq
 
 
-def _compute_loss(self, model, inputs, return_outputs=False, prompt_mass_weight=1.0):
+def _compute_loss(self, model, inputs, return_outputs=False):
     input_ids = inputs.pop("input_ids")
     if "prompt_lens" in inputs:
         prompt_lens = inputs.pop("prompt_lens")
@@ -31,7 +31,7 @@ def _compute_loss(self, model, inputs, return_outputs=False, prompt_mass_weight=
             mask[i, : last_idx + 1] = 1
         flattened_mask = mask.view(-1)
         weighted_mask = (
-            flattened_mask * self.prompt_mass_weight + (1 - flattened_mask)
+            flattened_mask * self.prompt_loss_weight + (1 - flattened_mask)
         ).to(lm_loss.device)
         lm_loss *= weighted_mask
 
@@ -93,10 +93,10 @@ class CustomTrainer(Trainer):
     """
 
     def __init__(
-        self, *args, prompt_mass_weight: float = 1.0, padding_token_id=-100, **kwargs
+        self, *args, prompt_loss_weight: float = 1.0, padding_token_id=-100, **kwargs
     ):
         super().__init__(*args, **kwargs)
-        self.prompt_mass_weight = prompt_mass_weight
+        self.prompt_mass_weight = prompt_loss_weight
         self.padding_token_id = padding_token_id
 
     def compute_loss(self, model, inputs, return_outputs: bool = False):

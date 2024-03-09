@@ -1,8 +1,8 @@
 .DS_Store
 **/finetuned_models/*
 
-!data/making_data*
-data/*
+training/data/*
+!training/data/making_data*
 
 
 wandb/

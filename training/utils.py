@@ -1,10 +1,9 @@
+# DISCLAIMER: a lot of this code is take/modified from FinGPT
 import os
 import datasets
 
 # A dictionary to store various prompt templates.
-template_dict = {
-    'default': 'Instruction: {instruction}\nInput: {input}\nAnswer: '
-}
+template_dict = {"default": "Instruction: {instruction}\nInput: {input}\nAnswer: "}
 
 # A dictionary to store the LoRA module mapping for different models.
 lora_module_dict = {
@@ -15,11 +14,13 @@ lora_module_dict = {
     # 'llama2': ['q_proj', 'k_proj', 'v_proj'],
     # 'llama2-13b': ['q_proj', 'k_proj', 'v_proj'],
     # 'llama2-13b-nr': ['q_proj', 'k_proj', 'v_proj'],
-    # 'qwen': ["c_attn"],
+    # 'qwen': ["c_attn"],ythi
     # 'mpt': ['Wqkv'],
     # 'baichuan': ['q_proj', 'k_proj', 'v_proj'],
-    'mamba': ["x_proj", "embeddings", "in_proj", "out_proj"]
+    "pythia": ["query_key_value"],
+    "mamba": ["x_proj", "embeddings", "in_proj", "out_proj"],
 }
+
 
 def get_prompt(template, instruction, input_text):
     """
@@ -40,7 +41,9 @@ def get_prompt(template, instruction, input_text):
         return input_text
 
     if template not in template_dict:
-        raise KeyError(f"Template '{template}' not found. Available templates: {', '.join(template_dict.keys())}")
+        raise KeyError(
+            f"Template '{template}' not found. Available templates: {', '.join(template_dict.keys())}"
+        )
 
     return template_dict[template].format(instruction=instruction, input=input_text)
 
@@ -60,19 +63,20 @@ def test_mapping(args, feature):
     ValueError: If 'instruction' or 'input' are not provided in the feature dictionary.
     """
     # Ensure 'instruction' and 'input' are present in the feature dictionary.
-    if 'instruction' not in feature or 'input' not in feature:
-        raise ValueError("Both 'instruction' and 'input' need to be provided in the feature dictionary.")
+    if "instruction" not in feature or "input" not in feature:
+        raise ValueError(
+            "Both 'instruction' and 'input' need to be provided in the feature dictionary."
+        )
 
     # Construct the prompt using the provided instruction and input.
     prompt = get_prompt(
-        args.instruct_template,
-        feature['instruction'],
-        feature['input']
+        args.instruct_template, feature["instruction"], feature["input"]
     )
 
     return {
         "prompt": prompt,
     }
+
 
 def tokenize(args, tokenizer, feature, prompt_in_label=False):
     """
@@ -88,26 +92,21 @@ def tokenize(args, tokenizer, feature, prompt_in_label=False):
     """
     # Generate the prompt.
     prompt = get_prompt(
-        args.instruct_template,
-        feature['instruction'],
-        feature['input']
+        args.instruct_template, feature["instruction"], feature["input"]
     )
     # Tokenize the prompt.
     prompt_ids = tokenizer(
-        prompt,
-        padding=False,
-        max_length=args.max_length,
-        truncation=True
-    )['input_ids']
+        prompt, padding=False, max_length=args.max_length, truncation=True
+    )["input_ids"]
 
     # Tokenize the target/output.
     target_ids = tokenizer(
-        feature['output'].strip(),
+        feature["output"].strip(),
         padding=False,
         max_length=args.max_length,
         truncation=True,
-        add_special_tokens=False
-    )['input_ids']
+        add_special_tokens=False,
+    )["input_ids"]
 
     # Combine tokenized prompt and target output.
     input_ids = prompt_ids + target_ids
@@ -121,19 +120,19 @@ def tokenize(args, tokenizer, feature, prompt_in_label=False):
         input_ids.append(tokenizer.eos_token_id)
     prompt_lens = len(prompt_ids)
 
-    # 
+    #
     if not prompt_in_label:
         # Create label IDs for training.
         # The labels should start from where the prompt ends, and be padded for the prompt portion.
         label_ids = [tokenizer.pad_token_id] * prompt_lens + input_ids[prompt_lens:]
     else:
         label_ids = input_ids
-        
+
     return {
         "input_ids": input_ids,
         "labels": label_ids,
         "exceed_max_length": exceed_max_length,
-        "prompt_lens": prompt_lens
+        "prompt_lens": prompt_lens,
     }
 
 
@@ -160,17 +159,25 @@ def parse_model_name(name, from_remote=False):
         # 'baichuan': ('baichuan-inc/Baichuan2-7B-Base', 'base_models/Baichuan2-7B-Base'),
         # 'mpt': ('cekal/mpt-7b-peft-compatible', 'base_models/mpt-7b-peft-compatible'),
         # 'bloom': ('bigscience/bloom-7b1', 'base_models/bloom-7b1'),
-        'mamba-small': ('state-spaces/mamba-130m-hf', 'base_models/mamba-130m-hf'),
-        'pythia-small': ('EleutherAI/pythia-70m-deduped', 'base_models/pythia-70m-deduped'),
-        'mamba-big': ('state-spaces/mamba-2.8b-hf', 'base_models/mamba-2.8b-hf'),
-        'pythia-big': ('EleutherAI/pythia-2.8b-deduped', 'base_models/pythia-2.8b-deduped')
+        "mamba-small": ("state-spaces/mamba-130m-hf", "base_models/mamba-130m-hf"),
+        "pythia-small": (
+            "EleutherAI/pythia-70m-deduped",
+            "base_models/pythia-70m-deduped",
+        ),
+        "mamba-big": ("state-spaces/mamba-2.8b-hf", "base_models/mamba-2.8b-hf"),
+        "pythia-big": (
+            "EleutherAI/pythia-2.8b-deduped",
+            "base_models/pythia-2.8b-deduped",
+        ),
     }
 
     if name in model_paths:
         return model_paths[name][0] if from_remote else model_paths[name][1]
     else:
-        valid_model_names = ', '.join(model_paths.keys())
-        raise ValueError(f"Undefined base model '{name}'. Valid model names are: {valid_model_names}")
+        valid_model_names = ", ".join(model_paths.keys())
+        raise ValueError(
+            f"Undefined base model '{name}'. Valid model names are: {valid_model_names}"
+        )
 
 
 def load_dataset(names, from_remote=False):
@@ -185,7 +192,7 @@ def load_dataset(names, from_remote=False):
     List[Dataset]: A list of loaded datasets. Each dataset is possibly replicated based on the input names.
     """
     # Split the dataset names by commas for handling multiple datasets
-    dataset_names = names.split(',')
+    dataset_names = names.split(",")
     dataset_list = []
 
     for name in dataset_names:
@@ -194,29 +201,41 @@ def load_dataset(names, from_remote=False):
         dataset_name = name
 
         # Check if the dataset name includes a replication factor
-        if '*' in name:
-            dataset_name, replication_factor = name.split('*')
+        if "*" in name:
+            dataset_name, replication_factor = name.split("*")
             replication_factor = int(replication_factor)
             if replication_factor < 1:
                 raise ValueError("Replication factor must be a positive integer.")
 
         # Construct the correct dataset path or name based on the source location
-        dataset_path_or_name = ('FinGPT/fingpt-' if from_remote else 'data/fingpt-') + dataset_name
+        dataset_path_or_name = (
+            "FinGPT/fingpt-" if from_remote else "data/fingpt-"
+        ) + dataset_name
+        
         if not os.path.exists(dataset_path_or_name) and not from_remote:
-            raise FileNotFoundError(f"The dataset path {dataset_path_or_name} does not exist.")
+            print(
+                f"The dataset path {dataset_path_or_name} does not exist, trying remote."
+            )
+            dataset_path_or_name = f"FinGPT/fingpt-{dataset_name}"
+            from_remote = True
 
         # Load the dataset
         try:
-            tmp_dataset = datasets.load_dataset(dataset_path_or_name) if from_remote else datasets.load_from_disk(
-                dataset_path_or_name)
+            tmp_dataset = (
+                datasets.load_dataset(dataset_path_or_name)
+                if from_remote
+                else datasets.load_from_disk(dataset_path_or_name)
+            )
         except Exception as e:
             raise RuntimeError(f"Failed to load the dataset: {str(e)}")
 
         # Check for 'test' split and create it from 'train' if necessary
-        if 'test' not in tmp_dataset:
-            if 'train' in tmp_dataset:
-                tmp_dataset = tmp_dataset['train']
-                tmp_dataset = tmp_dataset.train_test_split(test_size=0.2, shuffle=True, seed=42)
+        if "test" not in tmp_dataset:
+            if "train" in tmp_dataset:
+                tmp_dataset = tmp_dataset["train"]
+                tmp_dataset = tmp_dataset.train_test_split(
+                    test_size=0.2, shuffle=True, seed=42
+                )
             else:
                 raise ValueError("The dataset must contain a 'train' or 'test' split.")
 

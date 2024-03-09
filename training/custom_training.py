@@ -1,10 +1,13 @@
+from torch.nn.modules import Module
 from transformers import Trainer
 from trl import SFTTrainer
 import torch
+from typing import Optional, List, Tuple, Union, Any
 from torch.nn.functional import cross_entropy
 from typing import Dict, Sequence
 import os
 from transformers import DataCollatorForSeq2Seq
+from transformers.trainer_pt_utils import nested_detach
 
 
 def _compute_loss(self, model, inputs, return_outputs=False):
@@ -38,14 +41,54 @@ def _compute_loss(self, model, inputs, return_outputs=False):
     loss = lm_loss.mean()
     return (loss, outputs) if return_outputs else loss
 
+def _prediction_step(
+    self,
+    model: torch.nn.Module,
+    inputs: Dict[str, Union[torch.Tensor, Any]],
+    prediction_loss_only: bool,
+    ignore_keys: Optional[List[str]] = None,
+) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
+    with torch.no_grad():
+        output = model(
+            input_ids=inputs["input_ids"].to(model.device),
+            labels=inputs["input_ids"].to(model.device),
+        )
+            
+    logits = nested_detach(output.logits)
+    labels = None
+    if prediction_loss_only:
+        return (output.loss, logits, labels)
 
+    # if len(logits) == 1:
+    #     logits = logits[0]
+
+    # return (loss, logits, labels)
+#         outputs = model(**inputs)
+#         if hasattr(model, "config") and hasattr(model.config, "use_cache"):
+#             use_cache = model.config.use_cache
+#         else:
+#             use_cache = False
+
+#         if not prediction_loss_only:
+#             if use_cache:
+# Trainer  will fail on eval step as it tries to check if labels are present and we do not use labels
+# 3452         logits and labels (each being optional).
+#    3453     """
+# -> 3454     has_labels = False if len(self.label_names) == 0 else all(inputs.get(k) is not None for k in self.label_names)
+#    3455     # For CLIP-like models capable of returning loss values.
+#    3456     # If `return_loss` is not specified or being `None` in `inputs`, we check if the default value of `return_loss`
+#    3457     # is `True` in `model.forward`.
+#    3458     return_loss = inputs.get("return_loss", None)
+
+
+# AttributeError: 'NoneType' object has no attribute 'get'
 class MockTrainer(object):
     def __init__(
-        self, model, tokenizer, prompt_mass_weight: float = 1.0, padding_token_id=-100
+        self, model, tokenizer, prompt_loss_weight: float = 1.0, padding_token_id=-100
     ):
         self.model = model
         self.tokenizer = tokenizer
-        self.prompt_mass_weight = prompt_mass_weight
+        self.prompt_loss_weight = prompt_loss_weight
         self.padding_token_id = padding_token_id
 
     def compute_loss(self, model, inputs, return_outputs: bool = False):
@@ -61,21 +104,25 @@ class CustomSFTTrainer(SFTTrainer):
     the prompt tokens. This is only applied if prompt lengths (prompt_lens) are
     passed in the input dict.
 
-    \sum{L_{CE}(x, y) * (1 - mask) + L_{CE}(x, y) * mask * prompt_mass_weight
+    \sum{L_{CE}(x, y) * (1 - mask) + L_{CE}(x, y) * mask * prompt_loss_weight
 
     where L_{CE} is the CrossEntropyLoss, x is the input, y is the target, and
     mask is a binary mask that is 1 for prompt tokens and 0 for non-prompt tokens.
     """
 
     def __init__(
-        self, *args, prompt_mass_weight: float = 1.0, padding_token_id=-100, **kwargs
+        self, *args, prompt_loss_weight: float = 1.0, padding_token_id=-100, **kwargs
     ):
         super().__init__(*args, **kwargs)
-        self.prompt_mass_weight = prompt_mass_weight
+        self.prompt_loss_weight = prompt_loss_weight
         self.padding_token_id = padding_token_id
 
     def compute_loss(self, model, inputs, return_outputs=False):
         return _compute_loss(self, model, inputs, return_outputs=return_outputs)
+    
+    def prediction_step(self, model: Module, inputs: Dict[str, torch.Tensor | Any], prediction_loss_only: bool, ignore_keys: List[str] | None = None) -> Tuple[torch.Tensor | None]:
+        # return super().prediction_step(model, inputs, prediction_loss_only, ignore_keys)
+        return _prediction_step(self, model, inputs, prediction_loss_only, ignore_keys)
 
 
 class CustomTrainer(Trainer):
@@ -86,7 +133,7 @@ class CustomTrainer(Trainer):
     the prompt tokens. This is only applied if prompt lengths (prompt_lens) are
     passed in the input dict.
 
-    \sum{L_{CE}(x, y) * (1 - mask) + L_{CE}(x, y) * mask * prompt_mass_weight
+    \sum{L_{CE}(x, y) * (1 - mask) + L_{CE}(x, y) * mask * prompt_loss_weight
 
     where L_{CE} is the CrossEntropyLoss, x is the input, y is the target, and
     mask is a binary mask that is 1 for prompt tokens and 0 for non-prompt tokens.
@@ -96,11 +143,16 @@ class CustomTrainer(Trainer):
         self, *args, prompt_loss_weight: float = 1.0, padding_token_id=-100, **kwargs
     ):
         super().__init__(*args, **kwargs)
-        self.prompt_mass_weight = prompt_loss_weight
+        self.prompt_loss_weight = prompt_loss_weight
         self.padding_token_id = padding_token_id
 
     def compute_loss(self, model, inputs, return_outputs: bool = False):
         return _compute_loss(self, model, inputs, return_outputs=return_outputs)
+    
+    def prediction_step(self, model: Module, inputs: Dict[str, torch.Tensor | Any], prediction_loss_only: bool, ignore_keys: List[str] | None = None) -> Tuple[torch.Tensor | None]:
+        # return super().prediction_step(model, inputs, prediction_loss_only, ignore_keys)
+        return _prediction_step(self, model, inputs, prediction_loss_only, ignore_keys)
+
 
     # this is for saving the full model
     def save_model(self, output_dir, _internal_call=False):

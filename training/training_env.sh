@@ -22,9 +22,9 @@ conda activate $CONDA_ENV_NAME
 conda install -y pytorch::pytorch torchvision torchaudio -c pytorch
 
 # the usual
-conda install -y transformers datasets pytest pandas numpy tqdm ipykernel ipywidgets packaging
+conda install -y transformers datasets pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconvert
 
-pip install -U datasets trl wandb
+pip install -U datasets trl wandb peft
 
 conda list
 echo "-----------------------"

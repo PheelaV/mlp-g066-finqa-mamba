@@ -1,6 +1,9 @@
 .DS_Store
 **/finetuned_models/*
 
+!data/making_data*
+data/*
+
 
 wandb/
 

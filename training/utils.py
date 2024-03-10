@@ -1,6 +1,14 @@
 # DISCLAIMER: a lot of this code is take/modified from FinGPT
 import os
 import datasets
+import custom_training
+from transformers import (
+    AutoTokenizer,
+    TrainingArguments
+)
+import datasets
+from functools import partial
+import torch
 
 # A dictionary to store various prompt templates.
 template_dict = {"default": "Instruction: {instruction}\nInput: {input}\nAnswer: "}
@@ -243,3 +251,172 @@ def load_dataset(names, from_remote=False):
         dataset_list.extend([tmp_dataset] * replication_factor)
 
     return dataset_list
+
+
+def get_tokenizer(args, model_name):
+    """
+    Load the tokenizer and set the special tokens, specific to the model
+    """
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    if "mamba" in args.base_model or "pythia" in args.base_model:
+        # these were defaults either way
+        tokenizer.eos_token = "<|endoftext|>"
+        tokenizer.pad_token = "<|padding|>"
+        tokenizer.eos_token_id = tokenizer.convert_tokens_to_ids(tokenizer.eos_token)
+        tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids(tokenizer.pad_token)
+    return tokenizer
+
+
+def get_dataset(args, tokenizer):
+    """
+    Load the dataset and apply tokenization
+    """
+    tok_cls_name = (
+        tokenizer.__class__.__name__[:-4]
+        if tokenizer.__class__.__name__[-4:] == "Fast"
+        else tokenizer.__class__.__name__
+    )
+
+    # for persistence
+    dataset_id = f"{args.dataset}_{args.max_length}_{tok_cls_name}"
+    # if dataset is already tokenized, load it
+    # unless we specifically want the remote version
+    if (not args.from_remote_data) and os.path.exists(f"data/{dataset_id}"):
+        print("Using cached dataset")
+        return datasets.load_from_disk(f"data/{dataset_id}")
+    else:
+        print("Loading dataset from remote")
+
+    dataset_list = load_dataset(args.dataset, args.from_remote_data)
+    dataset_train = datasets.concatenate_datasets(
+        [d["train"] for d in dataset_list]
+    ).shuffle(seed=42)
+    if args.test_dataset:
+        dataset_list = load_dataset(args.test_dataset, args.from_remote_data)
+    dataset_test = datasets.concatenate_datasets([d["test"] for d in dataset_list])
+    dataset = datasets.DatasetDict({"train": dataset_train, "test": dataset_test})
+    # Display first sample from the training dataset
+    # print(dataset["train"][0])
+    # Filter out samples that exceed the maximum token length and remove unused columns
+    dataset = dataset.map(
+        partial(tokenize, args, tokenizer, prompt_in_label=True)
+    )
+    print("original dataset length: ", len(dataset["train"]))
+    dataset = dataset.filter(lambda x: not x["exceed_max_length"])
+    print("filtered dataset length: ", len(dataset["train"]))
+    dataset = dataset.remove_columns(
+        ["instruction", "input", "output", "exceed_max_length"]
+    )
+
+    dataset.save_to_disk(f"data/{dataset_id}")
+
+    return dataset
+
+
+def get_trainer(args, model, tokenizer, dataset, formatted_time):
+    """
+    Create the trainer and training arguments
+    """
+
+    common_args = {
+        "output_dir": f"finetuned_models/{args.run_name}_{formatted_time}",
+        "logging_steps": args.log_interval,
+        "num_train_epochs": args.num_epochs,
+        "dataloader_num_workers": args.num_workers,
+        "learning_rate": args.learning_rate,
+        "warmup_ratio": args.warmup_ratio,
+        "lr_scheduler_type": args.scheduler,
+        "save_steps": args.eval_steps,
+        "eval_steps": args.eval_steps,
+        "evaluation_strategy": args.evaluation_strategy,
+        "load_best_model_at_end": args.load_best_model,
+        "remove_unused_columns": False,
+        "report_to": "wandb",
+        "run_name": args.run_name,
+        "fp16": args.fp16 & torch.cuda.is_available(),
+        "logging_dir": "./logs",
+        "label_names":[]
+    }
+
+    if args.distributed:
+        distributed_args = {
+            "deepspeed": args.ds_config,
+            "per_device_train_batch_size": args.batch_size,
+            "per_device_eval_batch_size": args.batch_size,
+            "gradient_accumulation_steps": args.gradient_steps,
+        }
+        common_args.update(distributed_args)
+
+    training_args = TrainingArguments(**common_args)
+
+    if args.lora_r > 0:
+        from peft import (
+            LoraConfig,
+            # get_peft_model,
+            TaskType,
+        )
+
+        if "mamba" in args.base_model:
+            peft_config = LoraConfig(
+                r=args.lora_r,
+                target_modules=lora_module_dict["mamba"],
+                task_type=TaskType.CAUSAL_LM,
+                bias="none",
+            )
+        elif "pythia" in args.base_model:
+            peft_config = LoraConfig(
+                task_type=TaskType.CAUSAL_LM,
+                inference_mode=False,
+                r=args.lora_r,
+                lora_alpha=32,
+                lora_dropout=0.1,
+                target_modules=lora_module_dict["pythia"],
+                bias="none",
+            )
+        from peft import get_peft_model
+        model = get_peft_model(model, peft_config)
+        trainer = custom_training.CustomTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=dataset["train"],
+            eval_dataset=dataset["test"],
+            data_collator=custom_training.CustomDataCollatorSeq2Seq(
+                tokenizer, padding=True, max_length=args.max_length, pad_to_multiple_of=8
+            ),
+        )
+        # trainer = custom_training.CustomSFTTrainer(
+        #     model=model,
+        #     args=training_args,
+        #     peft_config=peft_config,
+        #     train_dataset=dataset["train"],
+        #     eval_dataset=dataset["test"],
+        #     formatting_func=lambda x: x,
+        #     data_collator=custom_training.CustomDataCollatorSeq2Seq(
+        #         tokenizer, padding=True
+        #     ),
+        #     # dataset_text_field="input_ids"
+        # )
+
+        # update args for logging
+        common_args.update(**peft_config.__dict__)
+    else:
+        trainer = custom_training.CustomTrainer(
+            model=model,
+            args=training_args,
+            train_dataset=dataset["train"],
+            eval_dataset=dataset["test"],
+            data_collator=custom_training.CustomDataCollatorSeq2Seq(
+                tokenizer, padding=True
+            ),
+        )
+
+        # trainer = SFTTrainer(
+    #     model=model,
+    #     tokenizer=tokenizer,
+    #     args=training_args,
+    #     peft_config=lora_config,
+    #     train_dataset=dataset,
+    #     dataset_text_field="quote",
+    # )
+    model.print_trainable_parameters()
+    return trainer, training_args, common_args

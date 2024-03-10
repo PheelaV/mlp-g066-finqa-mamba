@@ -1,6 +1,7 @@
 from torch.nn.modules import Module
 from transformers import Trainer
-from trl import SFTTrainer
+# from trl import SFTTrainer
+from custom_sft_trainer import SFTTrainer
 import torch
 from typing import Optional, List, Tuple, Union, Any
 from torch.nn.functional import cross_entropy
@@ -14,6 +15,7 @@ def _compute_loss(self, model, inputs, return_outputs=False):
     input_ids = inputs.pop("input_ids")
     if "prompt_lens" in inputs:
         prompt_lens = inputs.pop("prompt_lens")
+    prompt_lens = inputs.get("prompt_lens", None)
     outputs = model(input_ids)
 
     lm_logits = outputs.logits
@@ -41,24 +43,6 @@ def _compute_loss(self, model, inputs, return_outputs=False):
     loss = lm_loss.mean()
     return (loss, outputs) if return_outputs else loss
 
-def _prediction_step(
-    self,
-    model: torch.nn.Module,
-    inputs: Dict[str, Union[torch.Tensor, Any]],
-    prediction_loss_only: bool,
-    ignore_keys: Optional[List[str]] = None,
-) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
-    with torch.no_grad():
-        output = model(
-            input_ids=inputs["input_ids"].to(model.device),
-            labels=inputs["input_ids"].to(model.device),
-        )
-            
-    logits = nested_detach(output.logits)
-    labels = None
-    if prediction_loss_only:
-        return (output.loss, logits, labels)
-
     # if len(logits) == 1:
     #     logits = logits[0]
 
@@ -80,9 +64,30 @@ def _prediction_step(
 #    3457     # is `True` in `model.forward`.
 #    3458     return_loss = inputs.get("return_loss", None)
 
+# because we are passing around the metadata for the length of the prompt, we need are not going to use labels
+# while labels are stil required for the computation somewhere and so this is an effective workaround
+def _prediction_step(
+    self,
+    model: torch.nn.Module,
+    inputs: Dict[str, Union[torch.Tensor, Any]],
+    prediction_loss_only: bool,
+    ignore_keys: Optional[List[str]] = None,
+) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
+    with torch.no_grad():
+        output = model(
+            input_ids=inputs["input_ids"].to(model.device),
+            labels=inputs["input_ids"].to(model.device),
+        )
+            
+    logits = nested_detach(output.logits)
+    labels = None
+    if prediction_loss_only:
+        return (output.loss, logits, labels)
+
 
 # AttributeError: 'NoneType' object has no attribute 'get'
 class MockTrainer(object):
+    """ For testing purposes """
     def __init__(
         self, model, tokenizer, prompt_loss_weight: float = 1.0, padding_token_id=-100
     ):

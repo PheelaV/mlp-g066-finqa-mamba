@@ -25,7 +25,7 @@ dataset_args = namedtuple(
 
 dataset_args.dataset = "convfinqa"
 dataset_args.max_length = 512
-dataset_args.from_remote_data = True
+dataset_args.from_remote_data = False
 dataset_args.test_dataset = None
 dataset_args.instruct_template = "default"
 dataset_args.num_workers = multiprocessing.cpu_count()

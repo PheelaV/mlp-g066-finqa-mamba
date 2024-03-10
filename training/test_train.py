@@ -5,7 +5,7 @@ from peft import LoraConfig
 from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments
 
 
-model_id = "state-spaces/mamba-2.8b-hf"
+model_id = "state-spaces/mamba-1.4b-hf"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 model = AutoModelForCausalLM.from_pretrained(model_id)
 dataset = load_dataset("Abirate/english_quotes", split="train[:10%]")

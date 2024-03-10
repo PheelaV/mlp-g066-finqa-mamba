@@ -310,7 +310,7 @@ def get_dataset(args, tokenizer=None):
     # Filter out samples that exceed the maximum token length and remove unused columns
     dataset = dataset.map(
         partial(tokenize, args, tokenizer, prompt_in_label=True),
-        num_proc=args.num_workers,
+        # num_proc=args.num_workers,
     )
     print("original dataset length: ", len(dataset["train"]))
     dataset = dataset.filter(lambda x: not x["exceed_max_length"])

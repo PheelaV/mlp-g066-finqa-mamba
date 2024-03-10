@@ -20,7 +20,7 @@
 # 
 # This script will first check if the tokenized dataset is present in `data/` and use that, otherwise it will interface with huggingface and attempt to create a new one. This check is done by `dataset_id` which consists of the name of the particular tokenizer and the maximum sequence length (as the ones over length are ignored).
 
-# In[17]:
+# In[1]:
 
 
 import os
@@ -28,11 +28,8 @@ import json
 
 import argparse
 from datetime import datetime
-from functools import partial
 
 import torch
-from transformers import AutoTokenizer, TrainingArguments
-import datasets
 
 import utils
 import custom_training
@@ -59,181 +56,16 @@ def load_config(json_filepath):
         )
     return {}
 
-if not os.path.exists("data"):
-    os.makedirs("data")
-    
-if not os.path.exists("finetuned_models"):
-    os.makedirs("finetuned_models")
 
-
-# In[18]:
-
-
-def get_tokenizer(args, model_name):
-    """
-    Load the tokenizer and set the special tokens, specific to the model
-    """
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-    if "mamba" in args.base_model or "pythia" in args.base_model:
-        # these were defaults either way
-        tokenizer.eos_token = "<|endoftext|>"
-        tokenizer.pad_token = "<|padding|>"
-        tokenizer.eos_token_id = tokenizer.convert_tokens_to_ids(tokenizer.eos_token)
-        tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids(tokenizer.pad_token)
-    return tokenizer
-
-
-def get_dataset(args, tokenizer):
-    """
-    Load the dataset and apply tokenization
-    """
-
-    tok_cls_name = (
-        tokenizer.__class__.__name__[:-4]
-        if tokenizer.__class__.__name__[-4:] == "Fast"
-        else tokenizer.__class__.__name__
-    )
-
-    # for persistence
-    dataset_id = f"{args.dataset}_{args.max_length}_{tok_cls_name}"
-    # if dataset is already tokenized, load it
-    # unless we specifically want the remote version
-    if (not args.from_remote_data) and os.path.exists(f"data/{dataset_id}"):
-        print("Using cached dataset")
-        return datasets.load_from_disk(f"data/{dataset_id}")
-    else:
-        print("Loading dataset from remote")
-
-    dataset_list = utils.load_dataset(args.dataset, args.from_remote_data)
-    dataset_train = datasets.concatenate_datasets(
-        [d["train"] for d in dataset_list]
-    ).shuffle(seed=42)
-    if args.test_dataset:
-        dataset_list = utils.load_dataset(args.test_dataset, args.from_remote_data)
-    dataset_test = datasets.concatenate_datasets([d["test"] for d in dataset_list])
-    dataset = datasets.DatasetDict({"train": dataset_train, "test": dataset_test})
-    # Display first sample from the training dataset
-    # print(dataset["train"][0])
-    # Filter out samples that exceed the maximum token length and remove unused columns
-    dataset = dataset.map(
-        partial(utils.tokenize, args, tokenizer, prompt_in_label=True)
-    )
-    print("original dataset length: ", len(dataset["train"]))
-    dataset = dataset.filter(lambda x: not x["exceed_max_length"])
-    print("filtered dataset length: ", len(dataset["train"]))
-    dataset = dataset.remove_columns(
-        ["instruction", "input", "output", "exceed_max_length"]
-    )
-
-    dataset.save_to_disk(f"data/{dataset_id}")
-
-    return dataset
-
-
-def get_trainer(args, model, tokenizer, dataset, formatted_time):
-    """
-    Create the trainer and training arguments
-    """
-
-    common_args = {
-        "output_dir": f"finetuned_models/{args.run_name}_{formatted_time}",
-        "logging_steps": args.log_interval,
-        "num_train_epochs": args.num_epochs,
-        "dataloader_num_workers": args.num_workers,
-        "learning_rate": args.learning_rate,
-        "warmup_ratio": args.warmup_ratio,
-        "lr_scheduler_type": args.scheduler,
-        "save_steps": args.eval_steps,
-        "eval_steps": args.eval_steps,
-        "evaluation_strategy": args.evaluation_strategy,
-        "load_best_model_at_end": args.load_best_model,
-        "remove_unused_columns": False,
-        "report_to": "wandb",
-        "run_name": args.run_name,
-        "fp16": args.fp16 & torch.cuda.is_available(),
-        "logging_dir": "./logs",
-        "label_names":[]
-    }
-
-    if args.distributed:
-        distributed_args = {
-            "deepspeed": args.ds_config,
-            "per_device_train_batch_size": args.batch_size,
-            "per_device_eval_batch_size": args.batch_size,
-            "gradient_accumulation_steps": args.gradient_steps,
-        }
-        common_args.update(distributed_args)
-
-    training_args = TrainingArguments(**common_args)
-
-    if args.lora_r > 0:
-        from peft import (
-            LoraConfig,
-            # get_peft_model,
-            TaskType,
-        )
-
-        if "mamba" in args.base_model:
-            peft_config = LoraConfig(
-                r=args.lora_r,
-                target_modules=utils.lora_module_dict[args.base_model],
-                task_type=TaskType.CAUSAL_LM,
-                bias="none",
-            )
-        else:
-            peft_config = LoraConfig(
-                task_type=TaskType.CAUSAL_LM,
-                inference_mode=False,
-                r=args.lora_r,
-                lora_alpha=32,
-                lora_dropout=0.1,
-                target_modules=utils.lora_module_dict[args.base_model],
-                bias="none",
-            )
-        trainer = custom_training.CustomSFTTrainer(
-            model=model,
-            args=training_args,
-            peft_config=peft_config,
-            train_dataset=dataset["train"],
-            eval_dataset=dataset["test"],
-            data_collator=custom_training.CustomDataCollatorSeq2Seq(
-                tokenizer, padding=True
-            ),
-        )
-
-        # update args for logging
-        common_args.update(**peft_config.__dict__)
-    else:
-        trainer = custom_training.CustomTrainer(
-            model=model,
-            args=training_args,
-            train_dataset=dataset["train"],
-            eval_dataset=dataset["test"],
-            data_collator=custom_training.CustomDataCollatorSeq2Seq(
-                tokenizer, padding=True
-            ),
-        )
-
-        # trainer = SFTTrainer(
-    #     model=model,
-    #     tokenizer=tokenizer,
-    #     args=training_args,
-    #     peft_config=lora_config,
-    #     train_dataset=dataset,
-    #     dataset_text_field="quote",
-    # )
-
-    import wandb
-
-    wandb.init(project="mlp-g066-mamba", name=args.run_name, config=common_args)
-
-    return trainer, training_args
-
-
-# In[19]:
+# In[3]:
 
 
 def main(args):
+    if not os.path.exists("data"):
+        os.makedirs("data")
+    if not os.path.exists("finetuned_models"):
+        os.makedirs("finetuned_models")
+        
     mode = "interactive" if IS_INTERACTIVE else "non-interactive"
 
     if args.local_rank == 0:
@@ -256,8 +88,8 @@ def main(args):
         print(f"Using model: {model_name}")
     
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
-    tokenizer = get_tokenizer(args, model_name)
-    dataset = get_dataset(args, tokenizer)
+    tokenizer = utils.get_tokenizer(args, model_name)
+    dataset = utils.get_dataset(args, tokenizer)
     if args.local_rank == 0:
         print(f"Dataset loaded: {dataset}")
 
@@ -286,7 +118,7 @@ def main(args):
     formatted_time = current_time.strftime("%Y_%m_%d_%H%M")
 
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
-    tokenizer = get_tokenizer(args, model_name)
+    tokenizer = utils.get_tokenizer(args, model_name)
 
     device = (
         torch.device("cuda")
@@ -299,13 +131,17 @@ def main(args):
     if args.local_rank == 0:
         print(f"Commencing training on device: {device}, time: {formatted_time}")
     model = model.to(device)
-    trainer, training_args = get_trainer(
+    trainer, training_args, common_args = utils.get_trainer(
         args, model, tokenizer, dataset, formatted_time
     )
 
     # Clear CUDA cache and start training
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
+
+    import wandb
+
+    wandb.init(project="mlp-g066-mamba", name=args.run_name, config=common_args)
 
     # return
     trainer.train()
@@ -314,7 +150,7 @@ def main(args):
     model.save_pretrained(training_args.output_dir)
 
 
-# In[20]:
+# In[4]:
 
 
 if __name__ == "__main__":

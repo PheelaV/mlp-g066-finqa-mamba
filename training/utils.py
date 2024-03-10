@@ -172,7 +172,7 @@ def parse_model_name(name, from_remote=False):
             "EleutherAI/pythia-70m-deduped",
             "base_models/pythia-70m-deduped",
         ),
-        "mamba-big": ("state-spaces/mamba-2.8b-hf", "base_models/mamba-2.8b-hf"),
+        "mamba-big": ("state-spaces/mamba-2.8b-hf", "base_models/mamba-2.8b-hf"),   
         "pythia-big": (
             "EleutherAI/pythia-2.8b-deduped",
             "base_models/pythia-2.8b-deduped",
@@ -375,6 +375,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
             )
         from peft import get_peft_model
         model = get_peft_model(model, peft_config)
+        model.print_trainable_parameters()
         trainer = custom_training.CustomTrainer(
             model=model,
             args=training_args,
@@ -418,5 +419,4 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
     #     train_dataset=dataset,
     #     dataset_text_field="quote",
     # )
-    model.print_trainable_parameters()
     return trainer, training_args, common_args

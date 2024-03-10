@@ -11,10 +11,15 @@ eval "$(conda shell.bash hook)"
 conda create -n $CONDA_ENV_NAME -y python=$PYTHON_VER 
 conda activate $CONDA_ENV_NAME
 # linux:
+# conda install -y \
+#     pytorch==2.1.1 \
+#     torchvision==0.16.1 \
+#     torchaudio==2.1.1 \
+#     pytorch-cuda=12.1 \
 conda install -y \
-    pytorch==2.1.1 \
-    torchvision==0.16.1 \
-    torchaudio==2.1.1 \
+    pytorch2.2 \
+    torchvision \
+    torchaudio \
     pytorch-cuda=12.1 \
     -c pytorch -c nvidia \
     pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconvert
@@ -38,4 +43,13 @@ echo "-----------------------"
 echo "DONE"
 
 
-# pip install deepspeed
+# for the distributed stuff
+# pip install deepspeed bitsandbytes
+
+# mamba is a bit tricky to install
+# if pytorch is too old or too new
+# https://github.com/state-spaces/mamba/issues/217
+
+# torch and packaging is required by the conv_1d but you can't install those at once becase of the way
+# mamba-ssm and conv_1d packages are set up.
+

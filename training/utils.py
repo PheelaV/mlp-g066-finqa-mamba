@@ -267,7 +267,7 @@ def get_tokenizer(args, model_name):
     return tokenizer
 
 
-def get_dataset(args, tokenizer=None):
+def get_dataset(args, tokenizer):
     """
     Load the dataset and apply tokenization
     
@@ -279,7 +279,7 @@ def get_dataset(args, tokenizer=None):
         - test_dataset (str): The name of the test dataset to be loaded, optional.
         - instruct_template (str): The key to select the prompt template from the predefined dictionary.
         - num_workers (int): The number of workers to use for parallel processing, optional.
-    - tokenizer (Tokenizer): A tokenizer object used to convert text into tokens, optional.
+    - tokenizer (Tokenizer): A tokenizer object used to convert text into tokens.
     """
     tok_cls_name = (
         tokenizer.__class__.__name__[:-4]
@@ -288,7 +288,8 @@ def get_dataset(args, tokenizer=None):
     )
 
     # for persistence
-    dataset_id = f"{args.dataset}_{args.max_length}_{tok_cls_name}" if tokenizer else f"{args.dataset}_{args.max_length}_{tok_cls_name}"
+    dataset_id = f"{args.dataset}_{args.max_length}_{tok_cls_name}"
+    print(dataset_id)
     # if dataset is already tokenized, load it
     # unless we specifically want the remote version
     if (not args.from_remote_data) and os.path.exists(f"data/{dataset_id}"):
@@ -401,6 +402,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
                 tokenizer, padding=True
             ),
             prompt_loss_weight=args.prompt_loss_weight,
+            max_seq_length=args.max_length, # just to keep the warning silent as we are handling this ourselves
             tokenized_datasets=True, # the secret sauce to make this work
         )
 

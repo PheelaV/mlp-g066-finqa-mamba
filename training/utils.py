@@ -348,6 +348,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "lr_scheduler_type": args.scheduler,
         "load_best_model_at_end": args.load_best_model,
         "fp16": args.fp16 & torch.cuda.is_available(),
+        "optim": args.optim
         # "label_names":[]
     }
 

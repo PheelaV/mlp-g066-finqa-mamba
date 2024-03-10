@@ -330,23 +330,25 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
     """
 
     common_args = {
+        "run_name": args.run_name,
         "output_dir": f"finetuned_models/{args.run_name}_{formatted_time}",
-        "logging_steps": args.log_interval,
         "num_train_epochs": args.num_epochs,
         "dataloader_num_workers": args.num_workers,
-        "learning_rate": args.learning_rate,
-        "warmup_ratio": args.warmup_ratio,
-        "lr_scheduler_type": args.scheduler,
+        "remove_unused_columns": False, # maybe remove
+        #-------------------------------------------
+        "report_to": "wandb",
+        "logging_dir": "./logs",
+        "logging_steps": args.log_interval,
         "save_steps": args.eval_steps,
         "eval_steps": args.eval_steps,
         "evaluation_strategy": args.evaluation_strategy,
+        #-------------------------------------------
+        "learning_rate": args.learning_rate,
+        "warmup_ratio": args.warmup_ratio,
+        "lr_scheduler_type": args.scheduler,
         "load_best_model_at_end": args.load_best_model,
-        "remove_unused_columns": False, # this is necessary for the custom data collator
-        "report_to": "wandb",
-        "run_name": args.run_name,
         "fp16": args.fp16 & torch.cuda.is_available(),
-        "logging_dir": "./logs",
-        "label_names":[]
+        # "label_names":[]
     }
 
     if args.distributed:

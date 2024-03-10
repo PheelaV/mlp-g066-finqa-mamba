@@ -34,6 +34,8 @@ import torch
 import utils
 import custom_training
 
+from transformers import AutoModelForCausalLM
+
 
 def is_interactive():
     import __main__ as main
@@ -61,6 +63,13 @@ def load_config(json_filepath):
 
 
 def main(args):
+    device = (
+        torch.device("cuda")
+        if torch.cuda.is_available()
+        else torch.device("mps")
+        if torch.backends.mps.is_available()
+        else torch.device("cpu")
+    )
     if not os.path.exists("data"):
         os.makedirs("data")
     if not os.path.exists("finetuned_models"):
@@ -94,13 +103,10 @@ def main(args):
         print(f"Dataset loaded: {dataset}")
 
     if "mamba" in args.base_model:
-        from mamba_ssm.models.mixer_seq_simple import MambaLMHeadModel
-
-        model = MambaLMHeadModel.from_pretrained(
-            model_name, dtype=torch.bfloat16, device="cuda"
-        )
+        # this used to be different, now we can probably get rid of the
+        # branch, keeping it in for now
+        model = AutoModelForCausalLM.from_pretrained(model_name)
     else:
-        from transformers import AutoModelForCausalLM
 
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
@@ -120,17 +126,9 @@ def main(args):
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     tokenizer = utils.get_tokenizer(args, model_name)
 
-    device = (
-        torch.device("cuda")
-        if torch.cuda.is_available()
-        else torch.device("mps")
-        if torch.backends.mps.is_available()
-        else torch.device("cpu")
-    )
 
     if args.local_rank == 0:
         print(f"Commencing training on device: {device}, time: {formatted_time}")
-    model = model.to(device)
     trainer, training_args, common_args = utils.get_trainer(
         args, model, tokenizer, dataset, formatted_time
     )
@@ -211,7 +209,7 @@ if __name__ == "__main__":
         type=bool,
     )
     parser.add_argument(
-        "--prompt_loss_weight", default=0, type=float, help="Prompt loss weight"
+        "--prompt_loss_weight", default=1.0, type=float, help="Prompt loss weight"
     )
     parser.add_argument(
         "--distributed", default=False, type=bool, help="Enable deepspeed"

@@ -17,7 +17,7 @@
     "instruct_template": "default",
     "evaluation_strategy": "steps",
     "load_best_model": false,
-    "eval_steps": 0.1,
+    "eval_steps": 10,
     "from_remote_data": 0,
     "from_remote_model": 0,
     "prompt_loss_weight": 0,

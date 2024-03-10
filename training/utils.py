@@ -278,6 +278,7 @@ def get_dataset(args, tokenizer=None):
         - from_remote_data (bool): If True, load the dataset from Hugging Face's model hub. Otherwise, load it from a local disk.
         - test_dataset (str): The name of the test dataset to be loaded, optional.
         - instruct_template (str): The key to select the prompt template from the predefined dictionary.
+        - num_workers (int): The number of workers to use for parallel processing, optional.
     - tokenizer (Tokenizer): A tokenizer object used to convert text into tokens, optional.
     """
     tok_cls_name = (

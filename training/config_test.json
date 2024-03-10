@@ -23,6 +23,7 @@
     "prompt_loss_weight": 0,
     "distributed": false,
     "fp16": false,
+    "optim": "adamw_torch",
     "_comment": {
         "info": "this will be disregarded by the parser",
         "ds_config": "./config_new.json"

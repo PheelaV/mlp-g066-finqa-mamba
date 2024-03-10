@@ -267,9 +267,18 @@ def get_tokenizer(args, model_name):
     return tokenizer
 
 
-def get_dataset(args, tokenizer):
+def get_dataset(args, tokenizer=None):
     """
     Load the dataset and apply tokenization
+    
+    Args:
+    - args (Namespace): A namespace object containing various settings and configurations.
+        - dataset (str): The name of the dataset to be loaded.
+        - max_length (int): The maximum token length allowed for the input and output sequences.
+        - from_remote_data (bool): If True, load the dataset from Hugging Face's model hub. Otherwise, load it from a local disk.
+        - test_dataset (str): The name of the test dataset to be loaded, optional.
+        - instruct_template (str): The key to select the prompt template from the predefined dictionary.
+    - tokenizer (Tokenizer): A tokenizer object used to convert text into tokens, optional.
     """
     tok_cls_name = (
         tokenizer.__class__.__name__[:-4]
@@ -278,7 +287,7 @@ def get_dataset(args, tokenizer):
     )
 
     # for persistence
-    dataset_id = f"{args.dataset}_{args.max_length}_{tok_cls_name}"
+    dataset_id = f"{args.dataset}_{args.max_length}_{tok_cls_name}" if tokenizer else f"{args.dataset}_{args.max_length}_{tok_cls_name}"
     # if dataset is already tokenized, load it
     # unless we specifically want the remote version
     if (not args.from_remote_data) and os.path.exists(f"data/{dataset_id}"):
@@ -299,7 +308,8 @@ def get_dataset(args, tokenizer):
     # print(dataset["train"][0])
     # Filter out samples that exceed the maximum token length and remove unused columns
     dataset = dataset.map(
-        partial(tokenize, args, tokenizer, prompt_in_label=True)
+        partial(tokenize, args, tokenizer, prompt_in_label=True),
+        num_proc=args.num_workers,
     )
     print("original dataset length: ", len(dataset["train"]))
     dataset = dataset.filter(lambda x: not x["exceed_max_length"])
@@ -330,7 +340,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "eval_steps": args.eval_steps,
         "evaluation_strategy": args.evaluation_strategy,
         "load_best_model_at_end": args.load_best_model,
-        "remove_unused_columns": False,
+        "remove_unused_columns": False, # this is necessary for the custom data collator
         "report_to": "wandb",
         "run_name": args.run_name,
         "fp16": args.fp16 & torch.cuda.is_available(),
@@ -376,27 +386,27 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         from peft import get_peft_model
         model = get_peft_model(model, peft_config)
         model.print_trainable_parameters()
-        trainer = custom_training.CustomTrainer(
-            model=model,
-            args=training_args,
-            train_dataset=dataset["train"],
-            eval_dataset=dataset["test"],
-            data_collator=custom_training.CustomDataCollatorSeq2Seq(
-                tokenizer, padding=True, max_length=args.max_length, pad_to_multiple_of=8
-            ),
-        )
-        # trainer = custom_training.CustomSFTTrainer(
+        # trainer = custom_training.CustomTrainer(
         #     model=model,
         #     args=training_args,
-        #     peft_config=peft_config,
         #     train_dataset=dataset["train"],
         #     eval_dataset=dataset["test"],
-        #     formatting_func=lambda x: x,
         #     data_collator=custom_training.CustomDataCollatorSeq2Seq(
-        #         tokenizer, padding=True
+        #         tokenizer, padding=True, max_length=args.max_length, pad_to_multiple_of=8
         #     ),
-        #     # dataset_text_field="input_ids"
         # )
+        trainer = custom_training.CustomSFTTrainer(
+            model=model,
+            args=training_args,
+            peft_config=peft_config,
+            train_dataset=dataset["train"],
+            eval_dataset=dataset["test"],
+            formatting_func=lambda x: x,
+            data_collator=custom_training.CustomDataCollatorSeq2Seq(
+                tokenizer, padding=True
+            ),
+            # dataset_text_field="input_ids"
+        )
 
         # update args for logging
         common_args.update(**peft_config.__dict__)

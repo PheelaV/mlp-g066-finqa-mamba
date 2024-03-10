@@ -372,6 +372,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
                 r=args.lora_r,
                 target_modules=lora_module_dict["mamba"],
                 task_type=TaskType.CAUSAL_LM,
+                lora_dropout=0.1,
                 bias="none",
             )
         elif "pythia" in args.base_model:
@@ -379,34 +380,24 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
                 task_type=TaskType.CAUSAL_LM,
                 inference_mode=False,
                 r=args.lora_r,
-                lora_alpha=32,
+                # lora_alpha=32,
+                lora_alpha=args.lora_r,
                 lora_dropout=0.1,
                 target_modules=lora_module_dict["pythia"],
                 bias="none",
             )
-        from peft import get_peft_model
-        model = get_peft_model(model, peft_config)
-        model.print_trainable_parameters()
-        # trainer = custom_training.CustomTrainer(
-        #     model=model,
-        #     args=training_args,
-        #     train_dataset=dataset["train"],
-        #     eval_dataset=dataset["test"],
-        #     data_collator=custom_training.CustomDataCollatorSeq2Seq(
-        #         tokenizer, padding=True, max_length=args.max_length, pad_to_multiple_of=8
-        #     ),
-        # )
         trainer = custom_training.CustomSFTTrainer(
             model=model,
+            # tokenizer=tokenizer,
             args=training_args,
             peft_config=peft_config,
             train_dataset=dataset["train"],
             eval_dataset=dataset["test"],
-            formatting_func=lambda x: x,
             data_collator=custom_training.CustomDataCollatorSeq2Seq(
                 tokenizer, padding=True
             ),
-            # dataset_text_field="input_ids"
+            prompt_loss_weight=args.prompt_loss_weight,
+            tokenized_datasets=True, # the secret sauce to make this work
         )
 
         # update args for logging
@@ -420,6 +411,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
             data_collator=custom_training.CustomDataCollatorSeq2Seq(
                 tokenizer, padding=True
             ),
+            prompt_loss_weight=args.prompt_loss_weight,
         )
 
         # trainer = SFTTrainer(

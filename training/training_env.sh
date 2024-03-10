@@ -17,26 +17,25 @@ conda activate $CONDA_ENV_NAME
 #     torchaudio==2.1.1 \
 #     pytorch-cuda=12.1 \
 conda install -y \
-    pytorch2.2 \
+    pytorch=2.2 \
     torchvision \
     torchaudio \
     pytorch-cuda=12.1 \
     -c pytorch -c nvidia \
     pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconvert
-
 # arm mac:
 # conda install -y pytorch::pytorch torchvision torchaudio -c pytorch
 
 # the usual
 conda install -y pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconvert
 
-# 
 # for mamba 
 # You need to install transformers from main until transformers=4.39.0 is released.
 # https://huggingface.co/state-spaces/mamba-2.8b-hf 
 pip install git+https://github.com/huggingface/transformers@main
-
 pip install -U datasets trl wandb peft
+pip install causal-conv1d>=1.2.0
+pip install mamba-ssm
 
 conda list
 echo "-----------------------"

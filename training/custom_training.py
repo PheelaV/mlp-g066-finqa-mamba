@@ -8,8 +8,9 @@ from torch.nn.functional import cross_entropy
 from typing import Dict, Sequence
 import os
 from transformers import DataCollatorForSeq2Seq
-from transformers.trainer_pt_utils import nested_detach
+from transformers.trainer_pt_utils import nested_detach, smp_forward_only, smp_nested_concat
 
+from transformers.utils.import_utils import is_sagemaker_mp_enabled
 
 def _compute_loss(self, model, inputs, return_outputs=False):
     input_ids = inputs.pop("input_ids")
@@ -86,7 +87,7 @@ def _compute_loss(self, model, inputs, return_outputs=False):
 #     if prediction_loss_only:
 #         return (output.loss, logits, labels)
 
-from transformers.trainer_pt_utils import smp_forward_only, smp_nested_concat
+
 def _prediction_step(
     self,
     model: torch.nn.Module,

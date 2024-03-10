@@ -37,7 +37,7 @@ dataset_args.from_remote_data = False
 dataset_args.test_dataset = None
 dataset_args.instruct_template = "default"
 dataset_args.num_workers = multiprocessing.cpu_count()
-dataset = utils.get_dataset(args=dataset_args, tokenizer=tokenizer)
+dataset = utils.get_dataset(args=dataset_args, tokenizer=tokenizer)["train"]
 
 training_args = TrainingArguments(
     output_dir="./results",

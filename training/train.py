@@ -161,8 +161,12 @@ if __name__ == "__main__":
         type=str,
         help="Optional path to JSON configuration file",
     )
-    parser.add_argument("--local_rank", default=0, type=int ,help="Local rank for distributed training")
-    parser.add_argument("--lora_r", default=0, type=int, help="Lora rank, 0 for no lora")
+    parser.add_argument(
+        "--local_rank", default=0, type=int, help="Local rank for distributed training"
+    )
+    parser.add_argument(
+        "--lora_r", default=0, type=int, help="Lora rank, 0 for no lora"
+    )
     parser.add_argument("--run_name", default="local-test", type=str)
     parser.add_argument("--dataset", required=False, default="convfinqa", type=str)
     parser.add_argument("--test_dataset", type=str)
@@ -189,14 +193,20 @@ if __name__ == "__main__":
         help="The gradient accumulation steps",
     )
     parser.add_argument("--num_workers", default=8, type=int, help="dataloader workers")
-    parser.add_argument("--log_interval", default=20, type=int)
     parser.add_argument("--warmup_ratio", default=0.05, type=float)
     parser.add_argument("--ds_config", default="./config_new.json", type=str)
     parser.add_argument("--scheduler", default="linear", type=str)
     parser.add_argument("--instruct_template", default="default")
-    parser.add_argument("--evaluation_strategy", default="steps", type=str)
     parser.add_argument("--load_best_model", default="False", type=bool)
+    parser.add_argument("--log_interval", default=20, type=int)
+    parser.add_argument("--evaluation_strategy", default="steps", type=str)
     parser.add_argument("--eval_steps", default=0.1, type=float)
+    parser.add_argument(
+        "--optim",
+        type=str,
+        default="adamw_torch",
+        choices=["adamw_torch", "paged_adamw_8bit"],
+    )
     parser.add_argument(
         "--from_remote_data",
         default=0,
@@ -215,6 +225,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--fp16", default=False, type=bool, help="Enable fp16 precision"
+    )
+    parser.add_argument(
+        "--bf16", default=False, type=bool, help="Enable bf16 precision"
     )
 
     global args  # Namespace args

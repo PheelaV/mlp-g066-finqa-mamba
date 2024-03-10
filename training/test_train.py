@@ -19,7 +19,7 @@ model_id = "state-spaces/mamba-130m-hf"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 model = AutoModelForCausalLM.from_pretrained(model_id)
 # dataset = load_dataset("Abirate/english_quotes", split="train[:10%]")
-
+model.config.use_cache = False # https://github.com/huggingface/transformers/issues/29505
 dataset_args = namedtuple(
     "args",
     [
@@ -46,8 +46,7 @@ training_args = TrainingArguments(
     learning_rate=2e-3,
     evaluation_strategy="steps",
     report_to="wandb",
-    eval_steps=10,
-    use_cache=False,
+    eval_steps=10
 )
 lora_config = LoraConfig(
     r=8,

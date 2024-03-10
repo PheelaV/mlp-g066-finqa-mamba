@@ -236,9 +236,9 @@ class CustomSFTTrainer(SFTTrainer):
     def compute_loss(self, model, inputs, return_outputs=False):
         return _compute_loss(self, model, inputs, return_outputs=return_outputs)
     
-    # def prediction_step(self, model: Module, inputs: Dict[str, torch.Tensor | Any], prediction_loss_only: bool, ignore_keys: List[str] | None = None) -> Tuple[torch.Tensor | None]:
-    #     # return super().prediction_step(model, inputs, prediction_loss_only, ignore_keys)
-    #     return _prediction_step(self, model, inputs, prediction_loss_only, ignore_keys)
+    def prediction_step(self, model: Module, inputs: Dict[str, torch.Tensor | Any], prediction_loss_only: bool, ignore_keys: List[str] | None = None) -> Tuple[torch.Tensor | None]:
+        # return super().prediction_step(model, inputs, prediction_loss_only, ignore_keys)
+        return _prediction_step(self, model, inputs, prediction_loss_only, ignore_keys)
 
 
 class CustomTrainer(Trainer):

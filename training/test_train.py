@@ -53,5 +53,7 @@ trainer = SFTTrainer(
     peft_config=lora_config,
     train_dataset=dataset,
     # dataset_text_field="quote",
+    tokenized_datasets=True,
+    
 )
 trainer.train()

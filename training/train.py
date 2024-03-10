@@ -103,9 +103,8 @@ def main(args):
         print(f"Dataset loaded: {dataset}")
 
     if "mamba" in args.base_model:
-        # this used to be different, now we can probably get rid of the
-        # branch, keeping it in for now
         model = AutoModelForCausalLM.from_pretrained(model_name)
+        model.config.use_cache = False # https://github.com/huggingface/transformers/issues/29505
     else:
 
         model = AutoModelForCausalLM.from_pretrained(

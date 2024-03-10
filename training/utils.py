@@ -349,16 +349,16 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "load_best_model_at_end": args.load_best_model,
         "fp16": args.fp16 & torch.cuda.is_available(),
         "bf16": args.bf16 & torch.cuda.is_available(),
-        "optim": args.optim
+        "optim": args.optim,
+        "gradient_accumulation_steps": args.gradient_steps,
         # "label_names":[]
     }
 
     if args.distributed:
         distributed_args = {
-            "deepspeed": args.ds_config,
+            # "deepspeed": args.ds_config,
             "per_device_train_batch_size": args.batch_size,
             "per_device_eval_batch_size": args.batch_size,
-            "gradient_accumulation_steps": args.gradient_steps,
         }
         common_args.update(distributed_args)
 

@@ -119,6 +119,10 @@ class SFTTrainer(Trainer):
             Dict of Optional kwargs to pass when instantiating the model from a string
         dataset_kwargs: (`Optional[Dict]`, *optional*):
             Dict of Optional kwargs to pass when creating packed or non-packed datasets
+        tokenized_datasets: (`Optional[bool]`):
+            Whether the dataset is already tokenized or not. Defaults to `None`.
+            This is useful for situations where we are processing large amounts of data and want to deal with it separately,
+            while still wanting to take advantage of the rest of the SFTrainer's functionalities, i.e. handling PEFT etc.
     """
 
     _tag_names = ["trl", "sft"]
@@ -149,6 +153,7 @@ class SFTTrainer(Trainer):
         neftune_noise_alpha: Optional[float] = None,
         model_init_kwargs: Optional[Dict] = None,
         dataset_kwargs: Optional[Dict] = None,
+        tokenized_datasets: Optional[bool] = None,
     ):
         if model_init_kwargs is None:
             model_init_kwargs = {}
@@ -243,12 +248,12 @@ class SFTTrainer(Trainer):
         elif not self._trainer_supports_neftune:
             self.neftune_noise_alpha = neftune_noise_alpha
 
-        if formatting_func is None and dataset_text_field is None:
+        if formatting_func is None and dataset_text_field is None and not tokenized_datasets:
             # check if dataset has ChatML format or instruction format and is supported
             # if not stays #None
             formatting_func = get_formatting_func_from_dataset(train_dataset, tokenizer)
 
-        if not packing:
+        if not packing and not tokenized_datasets:
             if dataset_text_field is None and formatting_func is None:
                 raise ValueError(
                     "You passed `packing=False` to the SFTTrainer, but you didn't pass a `dataset_text_field` or `formatting_func` argument."
@@ -258,28 +263,13 @@ class SFTTrainer(Trainer):
                 data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
 
         # Pre-process the datasets only once per node. The remaining processes will use the cache.
-        with PartialState().local_main_process_first():
-            if dataset_kwargs is None:
-                dataset_kwargs = {}
-            if train_dataset is not None:
-                train_dataset = self._prepare_dataset(
-                    train_dataset,
-                    tokenizer,
-                    packing,
-                    dataset_text_field,
-                    max_seq_length,
-                    formatting_func,
-                    num_of_sequences,
-                    chars_per_token,
-                    remove_unused_columns=args.remove_unused_columns if args is not None else True,
-                    **dataset_kwargs,
-                )
-            if eval_dataset is not None:
-                _multiple = isinstance(eval_dataset, dict)
-                _eval_datasets = eval_dataset if _multiple else {"singleton": eval_dataset}
-                for _eval_dataset_name, _eval_dataset in _eval_datasets.items():
-                    _eval_datasets[_eval_dataset_name] = self._prepare_dataset(
-                        _eval_dataset,
+        if not tokenized_datasets:
+            with PartialState().local_main_process_first():
+                if dataset_kwargs is None:
+                    dataset_kwargs = {}
+                if train_dataset is not None:
+                    train_dataset = self._prepare_dataset(
+                        train_dataset,
                         tokenizer,
                         packing,
                         dataset_text_field,
@@ -290,8 +280,24 @@ class SFTTrainer(Trainer):
                         remove_unused_columns=args.remove_unused_columns if args is not None else True,
                         **dataset_kwargs,
                     )
-                if not _multiple:
-                    eval_dataset = _eval_datasets["singleton"]
+                if eval_dataset is not None:
+                    _multiple = isinstance(eval_dataset, dict)
+                    _eval_datasets = eval_dataset if _multiple else {"singleton": eval_dataset}
+                    for _eval_dataset_name, _eval_dataset in _eval_datasets.items():
+                        _eval_datasets[_eval_dataset_name] = self._prepare_dataset(
+                            _eval_dataset,
+                            tokenizer,
+                            packing,
+                            dataset_text_field,
+                            max_seq_length,
+                            formatting_func,
+                            num_of_sequences,
+                            chars_per_token,
+                            remove_unused_columns=args.remove_unused_columns if args is not None else True,
+                            **dataset_kwargs,
+                        )
+                    if not _multiple:
+                        eval_dataset = _eval_datasets["singleton"]
 
         if tokenizer.padding_side is not None and tokenizer.padding_side != "right":
             warnings.warn(
@@ -377,9 +383,9 @@ class SFTTrainer(Trainer):
         # check if torch dataset / dataloader and do nothing
         if isinstance(dataset, (torch.utils.data.IterableDataset, torch.utils.data.Dataset, ConstantLengthDataset)):
             return dataset
-        import datasets
-        if isinstance(dataset, (datasets.arrow_dataset.Dataset)):
-            return dataset
+        # import datasets
+        # if isinstance(dataset, (datasets.arrow_dataset.Dataset)):
+        #     return dataset
 
         if not packing:
             return self._prepare_non_packed_dataloader(

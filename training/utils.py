@@ -288,7 +288,9 @@ def get_dataset(args, tokenizer):
     )
 
     # for persistence
-    dataset_id = f"{args.dataset}_{args.max_length}_{tok_cls_name}"
+    dataset_name  = args.dataset.replace(",", "_").replace("*", "")
+
+    dataset_id = f"{dataset_name}_{args.max_length}_{tok_cls_name}"
     print(dataset_id)
     # if dataset is already tokenized, load it
     # unless we specifically want the remote version

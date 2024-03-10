@@ -47,6 +47,7 @@ training_args = TrainingArguments(
     evaluation_strategy="steps",
     report_to="wandb",
     eval_steps=10,
+    use_cache=False,
 )
 lora_config = LoraConfig(
     r=8,

@@ -32,11 +32,9 @@ dataset_args = namedtuple(
     ],
 )
 
-dataset_args.dataset = "convfinqa"
-dataset_args.max_length = 512
-dataset_args.from_remote_data = False
-dataset_args.test_dataset = None
-dataset_args.instruct_template = "default"
+
+dataset_args = dataset_args("convfinqa", 512, False, None, "default", None)
+
 dataset = utils.get_dataset(args=dataset_args, tokenizer=tokenizer)
 
 training_args = TrainingArguments(
@@ -58,9 +56,6 @@ lora_config = LoraConfig(
 )
 
 complete_args = {}
-complete_args.update(vars(dataset_args))
-complete_args.update(vars(training_args))
-complete_args.update(vars(lora_config))
 complete_args["prompt_loss_weight"] = 0.1
 run1 = wandb.init(project = "wood_runs", name = "test_run1", config = complete_args)
 # run1.log({'loss':loss1})
@@ -80,7 +75,6 @@ run1.finish()
 
 run2 = wandb.init(project = "wood_runs", name = "test_run2", config = complete_args)
 complete_args["prompt_loss_weight"] = 1.0
-
 trainer = SFTTrainer(
     model=model,
     tokenizer=tokenizer,

@@ -75,8 +75,10 @@ def _prediction_step(
 ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
     with torch.no_grad():
         output = model(
-            input_ids=inputs["input_ids"].to(model.device),
-            labels=inputs["input_ids"].to(model.device),
+            input_ids=inputs["input_ids"],
+            #.to(model.device),
+            labels=inputs["input_ids"]
+            #.to(model.device),
         )
             
     logits = nested_detach(output.logits)

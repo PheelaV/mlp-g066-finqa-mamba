@@ -18,21 +18,27 @@ from datasets import load_dataset
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--model", type=str)
+parser.add_argument("--model_size", type=str)
+parser.add_argument("--lora", type=bool, default=False)
+parser.add_argument("--model_type", type=str)
 args = parser.parse_args()
 
-if args.model == "l":
-    model_id = "state-spaces/mamba-2.8b-hf" # OOM
-elif args.model == "m":
-    model_id = "state-spaces/mamba-1.4b-hf"
-elif args.model == "s":
-    model_id = "EleutherAI/pythia-70m-deduped"
-# if args.model == "l":
-#     model_id = "state-spaces/mamba-2.8b-hf" # OOM
-# elif args.model == "m":
-#     model_id = "state-spaces/mamba-1.4b-hf"
-# elif args.model == "s":
-#     model_id = "state-spaces/mamba-130m-hf"
+if args.model_type == "pythia":
+  target_modules=["query_key_value"],
+  if args.model_size == "l":
+      model_id = "EleutherAI/pythia-2.8b-deduped"
+  elif args.model_size == "m":
+      model_id = "EleutherAI/pythia-1.4b-deduped"
+  elif args.model_size == "s":
+      model_id = "EleutherAI/pythia-70m-deduped"
+elif args.model_type == "mamba":
+  target_modules=["x_proj", "embeddings", "in_proj", "out_proj"],
+  if args.model == "l":
+      model_id = "state-spaces/mamba-2.8b-hf" # OOM
+  elif args.model == "m":
+      model_id = "state-spaces/mamba-1.4b-hf"
+  elif args.model == "s":
+      model_id = "state-spaces/mamba-130m-hf"
     
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 if tokenizer.pad_token_id is None:
@@ -75,8 +81,7 @@ training_args = TrainingArguments(
 )
 lora_config = LoraConfig(
     r=8,
-    target_modules=["query_key_value"],
-    # target_modules=["x_proj", "embeddings", "in_proj", "out_proj"],
+    target_modules=target_modules,
     task_type="CAUSAL_LM",
     bias="none",
 )

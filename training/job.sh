@@ -23,14 +23,17 @@ export PATH=${CUDA_HOME}/bin:${PATH}
 
 export PYTHON_PATH=$PATH
 
-mkdir -p /disk/scratch/${STUDENT_ID}
+# mkdir -p /disk/scratch/${STUDENT_ID}
+# mkdir -p /disk/scratch/${STUDENT_ID}
+# mkdir -p /disk/scratch/${STUDENT_ID}
 
 
 export TMPDIR=/disk/scratch/${STUDENT_ID}/
 export TMP=/disk/scratch/${STUDENT_ID}/
 
-mkdir -p ${TMP}/datasets/
-export DATASET_DIR=${TMP}/datasets/
+# mkdir -p ${TMP}/data/
+# mkdir -p ${TMP}/finetuned_models/
+export DATASET_DIR=${TMP}/data/
 
 export HF_DATASETS_CACHE=$DATASET_DIR
 

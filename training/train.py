@@ -107,9 +107,9 @@ def main(args):
         if torch.backends.mps.is_available()
         else torch.device("cpu")
     )
-    if not os.path.exists("data"):
+    if not os.path.exists(os.path.join(args.output_dir, "data")):
         os.makedirs("data")
-    if not os.path.exists("finetuned_models"):
+    if not os.path.exists(os.path.join(args.output_dir, "finetuned_models")):
         os.makedirs("finetuned_models")
         
     mode = "interactive" if IS_INTERACTIVE else "non-interactive"

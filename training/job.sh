@@ -43,7 +43,7 @@ source /home/${STUDENT_ID}/miniconda3/bin/activate mlp_g066_training
 
 # cd ~/repos/mlp-g066-finqa-mamba/training
 accelerate launch train.py \
-    --run_name mamba_s_mt_0-1 \ 
+    --run_name "mamba_s_mt_0-1" \
     --base_model mamba-small \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
     --max_length 512 \

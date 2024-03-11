@@ -1,8 +1,8 @@
 # from datasets import load_dataset
 
-# from trl import SFTTrainer
+from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
 # from custom_sft_trainer import SFTTrainer
-from custom_training import CustomSFTTrainer as SFTTrainer
+# from custom_training import CustomSFTTrainer as SFTTrainer
 import custom_training
 from peft import LoraConfig
 from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments
@@ -12,14 +12,17 @@ from collections import namedtuple
 
 import wandb
 
+from datasets import load_dataset
 
 # model_id = "state-spaces/mamba-2.8b-hf" # OOM
 # model_id = "state-spaces/mamba-1.4b-hf"
 model_id = "state-spaces/mamba-130m-hf"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 model = AutoModelForCausalLM.from_pretrained(model_id)
+dataset = load_dataset("Abirate/english_quotes", split="train")
 # dataset = load_dataset("Abirate/english_quotes", split="train[:10%]")
 model.config.use_cache = False # https://github.com/huggingface/transformers/issues/29505
+
 dataset_args = namedtuple(
     "args",
     [
@@ -29,13 +32,13 @@ dataset_args = namedtuple(
         "test_dataset",
         "instruct_template",
         "num_workers",
+        "output_dir",
     ],
 )
+dataset_args = dataset_args("sentiment-train,headline,finred*3,ner*15", 512, True, None, "default", None, "./")
+# dataset_args = dataset_args("convfinqa", 512, False, None, "default", None)
+dataset = utils.get_dataset(args=dataset_args, tokenizer=tokenizer, return_text=True)
 
-
-dataset_args = dataset_args("convfinqa", 512, False, None, "default", None)
-
-dataset = utils.get_dataset(args=dataset_args, tokenizer=tokenizer)
 
 training_args = TrainingArguments(
     output_dir="./results",
@@ -46,7 +49,7 @@ training_args = TrainingArguments(
     learning_rate=2e-3,
     evaluation_strategy="steps",
     report_to="wandb",
-    eval_steps=10
+    eval_steps=0.1
 )
 lora_config = LoraConfig(
     r=8,
@@ -57,34 +60,22 @@ lora_config = LoraConfig(
 
 complete_args = {}
 complete_args["prompt_loss_weight"] = 0.1
-run1 = wandb.init(project = "wood_runs", name = "test_run1", config = complete_args)
-# run1.log({'loss':loss1})
-trainer = SFTTrainer(
-    model=model,
-    tokenizer=tokenizer,
-    args=training_args,
-    peft_config=lora_config,
-    train_dataset=dataset["train"],
-    eval_dataset=dataset["test"],
-    data_collator=custom_training.CustomDataCollatorSeq2Seq(tokenizer, padding=True),
-    tokenized_datasets=True,
-    prompt_loss_weight=complete_args["prompt_loss_weight"]
-)
-trainer.train()
-run1.finish()
 
-run2 = wandb.init(project = "wood_runs", name = "test_run2", config = complete_args)
-complete_args["prompt_loss_weight"] = 1.0
+# instruction_template = "Instruction: :"
+# response_template = "Answer: "
+# collator = DataCollatorForCompletionOnlyLM(instruction_template=instruction_template, response_template=response_template, tokenizer=tokenizer, mlm=False)
 trainer = SFTTrainer(
     model=model,
     tokenizer=tokenizer,
     args=training_args,
-    peft_config=lora_config,
+    # peft_config=lora_config,
     train_dataset=dataset["train"],
     eval_dataset=dataset["test"],
-    data_collator=custom_training.CustomDataCollatorSeq2Seq(tokenizer, padding=True),
-    tokenized_datasets=True,
-    prompt_loss_weight=1.0
+    max_seq_length=512,
+    dataset_text_field="input_ids",
+    # data_collator=collator
+    # data_collator=custom_training.CustomDataCollatorSeq2Seq(tokenizer, padding=True),
+    # tokenized_datasets=True,
+    # prompt_loss_weight=complete_args["prompt_loss_weight"]
 )
 trainer.train()
-run2.finish()

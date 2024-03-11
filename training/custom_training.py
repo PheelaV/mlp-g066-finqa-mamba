@@ -16,6 +16,7 @@ from transformers.trainer_pt_utils import nested_detach
 def _compute_loss(self, model, inputs, return_outputs=False):
     input_ids = inputs.pop("input_ids")
     # prompt_lens = inputs.get("prompt_lens", None)
+    print(input.get("prompt_lens", None))
     prompt_lens = torch.ones(input_ids.size(0), dtype=torch.int) * int(input_ids.size(1) * 0.8)
     outputs = model(input_ids)
     

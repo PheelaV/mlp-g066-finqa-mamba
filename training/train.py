@@ -175,7 +175,7 @@ def main(args):
 
     import wandb
 
-    wandb.init(project="mlp-g066-mamba", name=args.run_name, config=common_args)
+    wandb.init(project="mlp-g066-mamba", name=args.run_name, config=common_args, dir=args.output_dir)
 
     # return
     trainer.train()
@@ -233,6 +233,7 @@ if __name__ == "__main__":
     parser.add_argument("--warmup_ratio", default=0.05, type=float)
     parser.add_argument("--ds_config", default="./config_new.json", type=str)
     parser.add_argument("--scheduler", default="linear", type=str)
+    parser.add_argument("--output_dir", default="./", type=str)
     parser.add_argument("--instruct_template", default="default")
     parser.add_argument("--load_best_model", default="False", type=bool)
     parser.add_argument("--log_interval", default=20, type=int)
@@ -266,6 +267,11 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--bf16", default=False, type=bool, help="Enable bf16 precision"
+    )
+    parser.add_argument(
+        # currently there seems to be a bug which causes OOM on too large of an evaluation set
+        # this is a problem with the HF trainer
+        "--eval", default=False, type=bool, help="Evaluate trhoughout training"
     )
 
     global args  # Namespace args

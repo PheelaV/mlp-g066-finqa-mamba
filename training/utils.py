@@ -334,13 +334,13 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
 
     common_args = {
         "run_name": args.run_name,
-        "output_dir": f"finetuned_models/{args.run_name}_{formatted_time}",
+        "output_dir": os.path.join(args.output_dir, "finetuned_models", f"{args.run_name}_{formatted_time}"),
         "num_train_epochs": args.num_epochs,
         # "dataloader_num_workers": args.num_workers,
         "remove_unused_columns": False, # maybe remove
         #-------------------------------------------
         "report_to": "wandb",
-        "logging_dir": "./logs",
+        "logging_dir": os.path.join(args.output_dir, "logs"),
         "logging_steps": args.log_interval,
         "save_steps": args.eval_steps,
         "eval_steps": args.eval_steps,

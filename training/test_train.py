@@ -37,9 +37,10 @@ dataset_args = namedtuple(
 )
 dataset_args = dataset_args("sentiment-train,headline,finred*3,ner*15", 512, True, None, "default", None, "./")
 # dataset_args = dataset_args("convfinqa", 512, False, None, "default", None)
+
 dataset = utils.get_dataset(args=dataset_args, tokenizer=tokenizer, return_text=True)
 
-
+del tokenizer
 training_args = TrainingArguments(
     output_dir="./results",
     num_train_epochs=3,

@@ -15,15 +15,15 @@ from transformers.trainer_pt_utils import nested_detach
 
 def _compute_loss(self, model, inputs, return_outputs=False):
     input_ids = inputs.pop("input_ids")
-    prompt_lens = inputs.get("prompt_lens", None)
+    # prompt_lens = inputs.get("prompt_lens", None)
     outputs = model(input_ids)
     
     lm_logits = outputs.logits
     labels = input_ids
-    #.to(lm_logits.device)
+
     shift_logits = lm_logits[..., :-1, :].contiguous()
     labels = labels[..., 1:].contiguous()
-    # labels = labels[:, 1:].contiguous()
+    
     loss = cross_entropy(
         shift_logits.view(-1, shift_logits.size(-1)),
         labels.view(-1),
@@ -31,6 +31,7 @@ def _compute_loss(self, model, inputs, return_outputs=False):
         ignore_index=self.padding_token_id,
     )
     return (loss, outputs) if return_outputs else loss
+
     # lm_loss = cross_entropy(
     #     shift_logits.view(-1, shift_logits.size(-1)),
     #     labels.view(-1),
@@ -45,7 +46,7 @@ def _compute_loss(self, model, inputs, return_outputs=False):
     #     flattened_mask = mask.view(-1)
     #     weighted_mask = (
     #         flattened_mask * self.prompt_loss_weight + (1 - flattened_mask)
-    #     )#.to(lm_loss.device)
+    #     )
     #     lm_loss *= weighted_mask
         
     #     del mask
@@ -142,9 +143,9 @@ class CustomSFTTrainer(SFTTrainer):
     def compute_loss(self, model, inputs, return_outputs=False):
         return _compute_loss(self, model, inputs, return_outputs=return_outputs)
     
-    def prediction_step(self, model: Module, inputs: Dict[str, torch.Tensor | Any], prediction_loss_only: bool, ignore_keys: List[str] | None = None) -> Tuple[torch.Tensor | None]:
-        # return super().prediction_step(model, inputs, prediction_loss_only, ignore_keys)
-        return _prediction_step(self, model, inputs, prediction_loss_only, ignore_keys)
+    # def prediction_step(self, model: Module, inputs: Dict[str, torch.Tensor | Any], prediction_loss_only: bool, ignore_keys: List[str] | None = None) -> Tuple[torch.Tensor | None]:
+    #     # return super().prediction_step(model, inputs, prediction_loss_only, ignore_keys)
+    #     return _prediction_step(self, model, inputs, prediction_loss_only, ignore_keys)
 
 
 class CustomTrainer(Trainer):

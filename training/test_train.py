@@ -1,8 +1,9 @@
 # from datasets import load_dataset
 
-from trl import SFTTrainer, DataCollatorForCompletionOnlyLM
+# from trl import SFTTrainer
+from trl import DataCollatorForCompletionOnlyLM
 # from custom_sft_trainer import SFTTrainer
-# from custom_training import CustomSFTTrainer as SFTTrainer
+from custom_training import CustomSFTTrainer as SFTTrainer
 import custom_training
 from peft import LoraConfig
 from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments

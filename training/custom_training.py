@@ -7,7 +7,7 @@ from typing import Optional, List, Tuple, Union, Any
 from torch.nn.functional import cross_entropy
 from typing import Dict, Sequence
 import os
-from transformers import DataCollatorForSeq2Seq
+from transformers import DataCollatorForSeq2Seq, DataCollatorForLanguageModeling
 from transformers.trainer_pt_utils import nested_detach
 # from transformers.trainer_pt_utils import smp_forward_only, smp_nested_concat
 
@@ -15,9 +15,9 @@ from transformers.trainer_pt_utils import nested_detach
 
 def _compute_loss(self, model, inputs, return_outputs=False):
     input_ids = inputs.pop("input_ids")
-    # prompt_lens = inputs.get("prompt_lens", None)
-    print(inputs.get("prompt_lens", None))
-    prompt_lens = torch.ones(input_ids.size(0), dtype=torch.int) * int(input_ids.size(1) * 0.8)
+    prompt_lens = inputs.get("prompt_lens", None)
+    # print(inputs.get("prompt_lens", None))
+    # prompt_lens = torch.ones(input_ids.size(0), dtype=torch.int) * int(input_ids.size(1) * 0.8)
     outputs = model(input_ids)
     
     lm_logits = outputs.logits
@@ -190,6 +190,7 @@ class CustomTrainer(Trainer):
         self.tokenizer.save_pretrained(output_dir)
 
 
+# class CustomDataCollatorSeq2Seq(DataCollatorForLanguageModeling):
 class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
     """
     Custom DataCollatorForSeq2Seq class to add prompt_lens to the batch.
@@ -207,6 +208,12 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
         label_pad_token_id=-100,
         return_tensors="pt",
     ):
+        # super().__init__(
+        #     tokenizer=tokenizer,
+        #     mlm=False,
+        #     pad_to_multiple_of=pad_to_multiple_of,
+        #     return_tensors=return_tensors,
+        # )
         super().__init__(
             tokenizer=tokenizer,
             model=model,
@@ -218,10 +225,19 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
         )
 
     def __call__(self, features: Sequence[Dict]) -> Dict:
+        # turns out this is not necessary if remove_unused_columns is set to False (as unused is determined by the partiuclar model signature) in trainer.py
         batch = super().__call__(features, return_tensors="pt")
         # Add prompt_lens if it exists in any of the features.
-        if "prompt_lens" in features[0]:
-            batch["prompt_lens"] = torch.tensor(
-                [feature.get("prompt_lens", 0) for feature in features]
-            ).to(batch["input_ids"].device)
+        # print("*" * 100)
+        # print(type(features[0]))
+        # print(type(batch))
+        # print(features[0].keys())
+        # print(batch.keys())
+        # if "prompt_lens" in features[0]:
+        #     batch["prompt_lens"] = torch.tensor(
+        #         [feature.get("prompt_lens", 0) for feature in features]
+        #     )
+        # print(batch.keys())
+        # print(batch)
+        # exit()
         return batch

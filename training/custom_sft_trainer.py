@@ -456,6 +456,7 @@ class SFTTrainer(Trainer):
                 f"inspect dataset other columns (in this case {extra_columns}), you can subclass `DataCollatorForLanguageModeling` in case you used the default collator and create your own data collator in order to inspect the unused dataset columns."
             )
 
+        print(dataset)
         tokenized_dataset = dataset.map(
             tokenize,
             batched=True,

@@ -19,7 +19,7 @@ from transformers.trainer_pt_utils import nested_detach
     # return (loss, outputs) if return_outputs else loss
 def _compute_loss(self, model, inputs, return_outputs=False):
     input_ids = inputs.pop("input_ids")
-    prompt_lens = inputs.get("prompt_lens", None)
+    prompt_lens = inputs.pop("prompt_lens")
     outputs = model(input_ids)
     
     lm_logits = outputs.logits
@@ -37,6 +37,9 @@ def _compute_loss(self, model, inputs, return_outputs=False):
     
     if not self.test_feature:
         lm_loss = lm_loss * prompt_lens.view(-1)
+        del prompt_lens
+        del shift_logits
+        del labels
     else:
         if prompt_lens is not None:
             mask = torch.zeros_like(labels, dtype=torch.float)
@@ -52,7 +55,6 @@ def _compute_loss(self, model, inputs, return_outputs=False):
             del mask
             del flattened_mask
             del weighted_mask
-
         del shift_logits
         del labels
         

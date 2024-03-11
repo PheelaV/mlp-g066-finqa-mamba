@@ -345,7 +345,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "save_steps": args.eval_steps,
         "eval_steps": args.eval_steps,
         "evaluation_strategy": args.evaluation_strategy,
-        "eval_accumulation_steps": 4,
+        "eval_accumulation_steps": args.eval_accumulation_steps,
         #-------------------------------------------
         "learning_rate": args.learning_rate,
         "warmup_ratio": args.warmup_ratio,

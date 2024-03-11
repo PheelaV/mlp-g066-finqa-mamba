@@ -17,12 +17,13 @@ def _compute_loss(self, model, inputs, return_outputs=False):
     input_ids = inputs.pop("input_ids")
     prompt_lens = inputs.get("prompt_lens", None)
     outputs = model(input_ids)
-
+    print(input_ids.device)
     lm_logits = outputs.logits
     labels = input_ids
     #.to(lm_logits.device)
-    shift_logits = lm_logits[:, :-1, :].contiguous()
-    labels = labels[:, 1:].contiguous()
+    shift_logits = lm_logits[..., :-1, :].contiguous()
+    labels = labels[..., 1:].contiguous()
+    # labels = labels[:, 1:].contiguous()
 
     lm_loss = cross_entropy(
         shift_logits.view(-1, shift_logits.size(-1)),

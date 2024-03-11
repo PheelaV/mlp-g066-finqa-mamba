@@ -328,6 +328,9 @@ def get_dataset(args, tokenizer, return_text=True):
     # Display first sample from the training dataset
     # print(dataset["train"][0])
     # Filter out samples that exceed the maximum token length and remove unused columns
+    dataset = dataset.filter(
+        lambda feature: len(feature["instruction"]) + len(feature["input"]) <= args.max_length
+    )
     dataset = dataset.map(
         partial(
             tokenize, args, tokenizer, prompt_in_label=True, return_text=return_text

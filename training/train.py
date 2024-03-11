@@ -59,6 +59,43 @@ def load_config(json_filepath):
     return {}
 
 
+# Trying to nail down OOMs
+
+# In[ ]:
+
+
+import logging
+import socket
+from datetime import datetime, timedelta
+
+import torch
+
+from torch.autograd.profiler import record_function
+from torchvision import models
+
+logging.basicConfig(
+   format="%(levelname)s:%(asctime)s %(message)s",
+   level=logging.INFO,
+   datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger: logging.Logger = logging.getLogger(__name__)
+logger.setLevel(level=logging.INFO)
+
+TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
+
+def trace_handler(prof: torch.profiler.profile):
+   # Prefix for file names.
+   host_name = socket.gethostname()
+   timestamp = datetime.now().strftime(TIME_FORMAT_STR)
+   file_prefix = f"{host_name}_{timestamp}"
+
+   # Construct the trace file.
+   prof.export_chrome_trace(f"{file_prefix}.json.gz")
+
+   # Construct the memory timeline file.
+   prof.export_memory_timeline(f"{file_prefix}.html", device="cuda:0")
+
+
 # In[3]:
 
 
@@ -201,6 +238,7 @@ if __name__ == "__main__":
     parser.add_argument("--log_interval", default=20, type=int)
     parser.add_argument("--evaluation_strategy", default="steps", type=str)
     parser.add_argument("--eval_steps", default=0.1, type=float)
+    parser.add_argument("--eval_accumulation_steps", default=None, type=int)
     parser.add_argument(
         "--optim",
         type=str,

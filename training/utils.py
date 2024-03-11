@@ -336,7 +336,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "run_name": args.run_name,
         "output_dir": f"finetuned_models/{args.run_name}_{formatted_time}",
         "num_train_epochs": args.num_epochs,
-        "dataloader_num_workers": args.num_workers,
+        # "dataloader_num_workers": args.num_workers,
         "remove_unused_columns": False, # maybe remove
         #-------------------------------------------
         "report_to": "wandb",
@@ -363,6 +363,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
             # "deepspeed": args.ds_config,
             "per_device_train_batch_size": args.batch_size,
             "per_device_eval_batch_size": args.batch_size,
+            "ddp_find_unused_parameters": False,
         }
         common_args.update(distributed_args)
 

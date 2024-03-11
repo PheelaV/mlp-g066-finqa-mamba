@@ -37,9 +37,8 @@ export HF_DATASETS_CACHE=$DATASET_DIR
 # df--gres=gpu:a6000:2
 
 source /home/${STUDENT_ID}/miniconda3/bin/activate mlp_g066_training
-cd ..
 
-cd ~/repos/mlp-g066-finqa-mamba/training
+# cd ~/repos/mlp-g066-finqa-mamba/training
 accelerate launch train.py \
 --run_name mamba_s_mt_0-1\ 
 --dataset sentiment-train,headline,finred*3,ner*15 \

@@ -65,6 +65,8 @@ complete_args["prompt_loss_weight"] = 0.1
 # instruction_template = "Instruction: :"
 # response_template = "Answer: "
 # collator = DataCollatorForCompletionOnlyLM(instruction_template=instruction_template, response_template=response_template, tokenizer=tokenizer, mlm=False)
+tokenizer = AutoTokenizer.from_pretrained(model_id)
+
 trainer = SFTTrainer(
     model=model,
     tokenizer=tokenizer,

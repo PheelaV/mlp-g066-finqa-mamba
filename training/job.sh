@@ -43,13 +43,13 @@ source /home/${STUDENT_ID}/miniconda3/bin/activate mlp_g066_training
 
 # cd ~/repos/mlp-g066-finqa-mamba/training
 accelerate launch train.py \
---run_name mamba_s_mt_0-1\ 
---dataset "sentiment-train,headline,finred*3,ner*15" \
---max_length 512 \
---config config_mt.json \
---distributed 1 \
---eval_accumulation_steps 8 \
---prompt_loss_weight 0.1 \
---base_model mamba-small \
---output_dir $TMP \
+    --run_name mamba_s_mt_0-1 \ 
+    --base_model mamba-small \
+    --dataset "sentiment-train,headline,finred*3,ner*15" \
+    --max_length 512 \
+    --config config_mt.json \
+    --distributed 1 \
+    --eval_accumulation_steps 8 \
+    --prompt_loss_weight 0.1 \
+    --output_dir $TMP \
 >train.log 2>&1 &

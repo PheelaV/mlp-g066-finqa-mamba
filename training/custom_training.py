@@ -9,18 +9,6 @@ from typing import Dict, Sequence
 import os
 from transformers import DataCollatorForSeq2Seq, DataCollatorForLanguageModeling
 from transformers.trainer_pt_utils import nested_detach
-# from transformers.trainer_pt_utils import smp_forward_only, smp_nested_concat
-
-# from transformers.utils.import_utils import is_sagemaker_mp_enabled
-
-    # print(input_ids)
-    # exit()
-    # print(inputs.get("prompt_lens", None))
-    # prompt_lens = torch.ones(input_ids.size(0), dtype=torch.int) * int(input_ids.size(1) * 0.8)
-    # print(shift_logits.size())
-    # print(labels.size())
-    # print(prompt_lens.size())
-    # exit()
     
     # loss = cross_entropy(
     #     shift_logits.view(-1, shift_logits.size(-1)),
@@ -47,44 +35,30 @@ def _compute_loss(self, model, inputs, return_outputs=False):
         ignore_index=self.padding_token_id,
     )
     
-    lm_loss = lm_loss * prompt_lens.view(-1)
+    if not self.test_feature:
+        lm_loss = lm_loss * prompt_lens.view(-1)
+    else:
+        if prompt_lens is not None:
+            mask = torch.zeros_like(labels, dtype=torch.float)
+            for i, last_idx in enumerate(prompt_lens):
+                mask[i, : last_idx + 1] = 1
+            flattened_mask = mask.view(-1)
+            weighted_mask = (
+                flattened_mask * self.prompt_loss_weight + (1 - flattened_mask)
+            )
+            lm_loss *= weighted_mask
+            
+            # eagerly deleting as much as possible as we have had issues with GPU memory leaks
+            del mask
+            del flattened_mask
+            del weighted_mask
 
-    # if prompt_lens is not None:
-    #     mask = torch.zeros_like(labels, dtype=torch.float)
-    #     for i, last_idx in enumerate(prompt_lens):
-    #         mask[i, : last_idx + 1] = 1
-    #     flattened_mask = mask.view(-1)
-    #     weighted_mask = (
-    #         flattened_mask * self.prompt_loss_weight + (1 - flattened_mask)
-    #     )
-    #     lm_loss *= weighted_mask
-        
-    #     # eagerly deleting as much as possible as we have had issues with GPU memory leaks
-    #     del mask
-    #     del flattened_mask
-    #     del weighted_mask
-
-    # del shift_logits
-    # del labels
+        del shift_logits
+        del labels
         
     loss = lm_loss.mean()
-    # print(f"custom loss: {loss.item()}")
-    # print(f"mode loss: {outputs2.loss.item()}")
-    # exit()
     return (loss, outputs) if return_outputs else loss
 
-    # if len(logits) == 1:
-    #     logits = logits[0]
-
-    # return (loss, logits, labels)
-#         outputs = model(**inputs)
-#         if hasattr(model, "config") and hasattr(model.config, "use_cache"):
-#             use_cache = model.config.use_cache
-#         else:
-#             use_cache = False
-
-#         if not prediction_loss_only:
-#             if use_cache:
 # Trainer  will fail on eval step as it tries to check if labels are present and we do not use labels
 # 3452         logits and labels (each being optional).
 #    3453     """
@@ -148,12 +122,13 @@ class CustomSFTTrainer(SFTTrainer):
     """
 
     def __init__(
-        self, *args, prompt_loss_weight: float = 1.0, padding_token_id=-100, **kwargs
+        self, *args, prompt_loss_weight: float = 1.0, padding_token_id=-100, test_feature, **kwargs
     ):
         # if ""
         super().__init__(*args, **kwargs)
         self.prompt_loss_weight = prompt_loss_weight
         self.padding_token_id = padding_token_id
+        self.test_feature = test_feature
 
     def compute_loss(self, model, inputs, return_outputs=False):
         return _compute_loss(self, model, inputs, return_outputs=return_outputs)
@@ -221,6 +196,7 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
         label_pad_token_id=-100,
         return_tensors="pt",
         prompt_loss_weight:float = 0.1,
+        test_feature = False # if this is active let's get the old way of getting PLW
     ):
         # super().__init__(
         #     tokenizer=tokenizer,
@@ -229,6 +205,7 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
         #     return_tensors=return_tensors,
         # )
         self.prompt_loss_weight = prompt_loss_weight
+        self.test_feature = test_feature
         super().__init__(
             tokenizer=tokenizer,
             model=model,
@@ -242,6 +219,8 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
     def __call__(self, features: Sequence[Dict]) -> Dict:
         # turns out this is not necessary if remove_unused_columns is set to False (as unused is determined by the partiuclar model signature) in trainer.py
         batch = super().__call__(features, return_tensors="pt")
+        if self.prompt_loss_weight == 1 or self.test_feature :
+            return batch
         # Add prompt_lens if it exists in any of the features.
         # print(type(features[0]))
         # print(type(batch))

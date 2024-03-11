@@ -2,6 +2,7 @@
 
 # from trl import SFTTrainer
 from trl import DataCollatorForCompletionOnlyLM
+
 # from custom_sft_trainer import SFTTrainer
 from custom_training import CustomSFTTrainer as SFTTrainer
 import custom_training
@@ -21,24 +22,25 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--model_size", type=str)
 parser.add_argument("--lora", type=bool, default=False)
 parser.add_argument("--model_type", type=str)
+parser.add_argument("--test_feature", type=bool, default=False)
 args = parser.parse_args()
 if args.model_type == "pythia":
-  target_modules=["query_key_value"]
-  if args.model_size == "l":
-      model_id = "EleutherAI/pythia-2.8b-deduped"
-  elif args.model_size == "m":
-      model_id = "EleutherAI/pythia-1.4b-deduped"
-  elif args.model_size == "s":
-      model_id = "EleutherAI/pythia-70m-deduped"
+    target_modules = ["query_key_value"]
+    if args.model_size == "l":
+        model_id = "EleutherAI/pythia-2.8b-deduped"
+    elif args.model_size == "m":
+        model_id = "EleutherAI/pythia-1.4b-deduped"
+    elif args.model_size == "s":
+        model_id = "EleutherAI/pythia-70m-deduped"
 elif args.model_type == "mamba":
-  target_modules=["x_proj", "embeddings", "in_proj", "out_proj"]
-  if args.model_size == "l":
-      model_id = "state-spaces/mamba-2.8b-hf" # OOM
-  elif args.model_size == "m":
-      model_id = "state-spaces/mamba-1.4b-hf"
-  elif args.model_size == "s":
-      model_id = "state-spaces/mamba-130m-hf"
-    
+    target_modules = ["x_proj", "embeddings", "in_proj", "out_proj"]
+    if args.model_size == "l":
+        model_id = "state-spaces/mamba-2.8b-hf"  # OOM
+    elif args.model_size == "m":
+        model_id = "state-spaces/mamba-1.4b-hf"
+    elif args.model_size == "s":
+        model_id = "state-spaces/mamba-130m-hf"
+
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 if tokenizer.pad_token_id is None:
     tokenizer.pad_token = tokenizer.eos_token
@@ -46,7 +48,9 @@ if tokenizer.pad_token_id is None:
 model = AutoModelForCausalLM.from_pretrained(model_id)
 # dataset = load_dataset("Abirate/english_quotes", split="train")
 # dataset = load_dataset("Abirate/english_quotes", split="train[:10%]")
-model.config.use_cache = False # https://github.com/huggingface/transformers/issues/29505
+model.config.use_cache = (
+    False  # https://github.com/huggingface/transformers/issues/29505
+)
 
 dataset_args = namedtuple(
     "args",
@@ -60,7 +64,9 @@ dataset_args = namedtuple(
         "output_dir",
     ],
 )
-dataset_args = dataset_args("sentiment-train,headline,finred*3,ner*15", 512, False, None, "default", None, "./")
+dataset_args = dataset_args(
+    "sentiment-train,headline,finred*3,ner*15", 512, False, None, "default", None, "./"
+)
 # dataset_args = dataset_args("convfinqa", 512, False, None, "default", None)
 
 dataset = utils.get_dataset(args=dataset_args, tokenizer=tokenizer, return_text=False)
@@ -76,7 +82,7 @@ training_args = TrainingArguments(
     evaluation_strategy="steps",
     report_to="wandb",
     eval_steps=0.1,
-    remove_unused_columns=False # important because we are injecting custom metadata for the loss function
+    remove_unused_columns=False,  # important because we are injecting custom metadata for the loss function
 )
 # lora_config =  LoraConfig(
 #     r=8,
@@ -92,12 +98,13 @@ lora_config = LoraConfig(
 )
 
 complete_args = {}
-complete_args["prompt_loss_weight"] = 0.01
+complete_args["prompt_loss_weight"] = 0.1
 
 # instruction_template = "Instruction: :"
 # response_template = "Answer: "
 # collator = DataCollatorForCompletionOnlyLM(instruction_template=instruction_template, response_template=response_template, tokenizer=tokenizer, mlm=False)
 import os
+
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 if tokenizer.pad_token_id is None:
@@ -127,8 +134,11 @@ trainer = SFTTrainer(
     max_seq_length=512,
     # dataset_text_field="input_ids",
     # data_collator=collator
-    data_collator=custom_training.CustomDataCollatorSeq2Seq(tokenizer, padding=True),
+    data_collator=custom_training.CustomDataCollatorSeq2Seq(
+        tokenizer, padding=True, prompt_loss_weight=complete_args["prompt_loss_weight"], test_feature=args.test_feature
+    ),
     tokenized_datasets=True,
-    prompt_loss_weight=complete_args["prompt_loss_weight"]
+    prompt_loss_weight=complete_args["prompt_loss_weight"],
+    test_feature=args.test_feature
 )
 trainer.train()

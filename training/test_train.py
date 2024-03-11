@@ -33,11 +33,11 @@ if args.model_type == "pythia":
       model_id = "EleutherAI/pythia-70m-deduped"
 elif args.model_type == "mamba":
   target_modules=["x_proj", "embeddings", "in_proj", "out_proj"],
-  if args.model == "l":
+  if args.model_size == "l":
       model_id = "state-spaces/mamba-2.8b-hf" # OOM
-  elif args.model == "m":
+  elif args.model_size == "m":
       model_id = "state-spaces/mamba-1.4b-hf"
-  elif args.model == "s":
+  elif args.model_size == "s":
       model_id = "state-spaces/mamba-130m-hf"
     
 tokenizer = AutoTokenizer.from_pretrained(model_id)

@@ -78,12 +78,18 @@ training_args = TrainingArguments(
     eval_steps=0.1,
     remove_unused_columns=False # important because we are injecting custom metadata for the loss function
 )
-lora_config = LoraConfig(
+lora_config =  LoraConfig(
     r=8,
-    target_modules=target_modules,
+    target_modules=["x_proj", "embeddings", "in_proj", "out_proj"],
     task_type="CAUSAL_LM",
-    bias="none",
+    bias="none"
 )
+# lora_config = LoraConfig(
+#     r=8,
+#     target_modules=target_modules,
+#     task_type="CAUSAL_LM",
+#     bias="none",
+# )
 
 complete_args = {}
 complete_args["prompt_loss_weight"] = 1.0

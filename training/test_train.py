@@ -2,8 +2,8 @@
 
 # from trl import SFTTrainer
 from trl import DataCollatorForCompletionOnlyLM
-# from custom_sft_trainer import SFTTrainer
-from custom_training import CustomSFTTrainer as SFTTrainer
+from custom_sft_trainer import SFTTrainer
+# from custom_training import CustomSFTTrainer as SFTTrainer
 import custom_training
 from peft import LoraConfig
 from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments
@@ -79,20 +79,6 @@ complete_args["prompt_loss_weight"] = 1.0
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
-trainer = SFTTrainer(
-    model=model,
-    tokenizer=tokenizer,
-    args=training_args,
-    peft_config=lora_config,
-    train_dataset=dataset["train"],
-    eval_dataset=dataset["test"],
-    max_seq_length=512,
-    dataset_text_field="input_ids",
-    # data_collator=collator
-    # data_collator=custom_training.CustomDataCollatorSeq2Seq(tokenizer, padding=True),
-    # tokenized_datasets=True,
-    # prompt_loss_weight=complete_args["prompt_loss_weight"]
-)
 # trainer = SFTTrainer(
 #     model=model,
 #     tokenizer=tokenizer,
@@ -103,8 +89,22 @@ trainer = SFTTrainer(
 #     max_seq_length=512,
 #     dataset_text_field="input_ids",
 #     # data_collator=collator
-#     # data_collator=custom_training.CustomDataCollatorSeq2Seq(tokenizer, padding=True),
+#     data_collator=custom_training.CustomDataCollatorSeq2Seq(tokenizer, padding=True),
 #     # tokenized_datasets=True,
-#     prompt_loss_weight=complete_args["prompt_loss_weight"]
+#     # prompt_loss_weight=complete_args["prompt_loss_weight"]
 # )
+trainer = SFTTrainer(
+    model=model,
+    # tokenizer=tokenizer,
+    args=training_args,
+    peft_config=lora_config,
+    train_dataset=dataset["train"],
+    eval_dataset=dataset["test"],
+    max_seq_length=512,
+    dataset_text_field="input_ids",
+    # data_collator=collator
+    data_collator=custom_training.CustomDataCollatorSeq2Seq(tokenizer, padding=True),
+    tokenized_datasets=False,
+    prompt_loss_weight=complete_args["prompt_loss_weight"]
+)
 trainer.train()

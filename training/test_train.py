@@ -14,9 +14,19 @@ import wandb
 
 from datasets import load_dataset
 
-# model_id = "state-spaces/mamba-2.8b-hf" # OOM
-# model_id = "state-spaces/mamba-1.4b-hf"
-model_id = "state-spaces/mamba-130m-hf"
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--model", type=str)
+args = parser.parse_args()
+
+if args.model == "l":
+    model_id = "state-spaces/mamba-2.8b-hf" # OOM
+elif args.model == "m":
+    model_id = "state-spaces/mamba-1.4b-hf"
+elif args.model == "s":
+    model_id = "state-spaces/mamba-130m-hf"
+    
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 model = AutoModelForCausalLM.from_pretrained(model_id)
 dataset = load_dataset("Abirate/english_quotes", split="train")

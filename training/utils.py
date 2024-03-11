@@ -276,7 +276,7 @@ def get_tokenizer(args, model_name):
     return tokenizer
 
 
-def get_dataset(args, tokenizer, return_text=True):
+def get_dataset(args, tokenizer, return_text=True, prompt_mask=False):
     """
     Load the dataset and apply tokenization
 
@@ -313,7 +313,9 @@ def get_dataset(args, tokenizer, return_text=True):
     cache_dataset_path = os.path.join(args.output_dir, f"data/{dataset_id}")
     if (not args.from_remote_data) and os.path.exists(cache_dataset_path) and not return_text:
         print("Using cached dataset")
-        return datasets.load_from_disk(cache_dataset_path)
+        dataset = datasets.load_from_disk(cache_dataset_path)
+        # dataset = dataset.map(lambda x: x["prompt_lens"])
+        return dataset
     else:
         print("Loading dataset from remote")
 

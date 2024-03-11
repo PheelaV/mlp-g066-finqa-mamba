@@ -13,18 +13,14 @@ from transformers.trainer_pt_utils import nested_detach
 
 # from transformers.utils.import_utils import is_sagemaker_mp_enabled
 
-def _compute_loss(self, model, inputs, return_outputs=False):
-    input_ids = inputs.pop("input_ids")
-    prompt_lens = inputs.get("prompt_lens", None)
+    # print(input_ids)
+    # exit()
     # print(inputs.get("prompt_lens", None))
     # prompt_lens = torch.ones(input_ids.size(0), dtype=torch.int) * int(input_ids.size(1) * 0.8)
-    outputs = model(input_ids)
-    
-    lm_logits = outputs.logits
-    labels = input_ids
-
-    shift_logits = lm_logits[..., :-1, :].contiguous()
-    labels = labels[..., 1:].contiguous()
+    # print(shift_logits.size())
+    # print(labels.size())
+    # print(prompt_lens.size())
+    # exit()
     
     # loss = cross_entropy(
     #     shift_logits.view(-1, shift_logits.size(-1)),
@@ -33,6 +29,16 @@ def _compute_loss(self, model, inputs, return_outputs=False):
     #     ignore_index=self.padding_token_id,
     # )
     # return (loss, outputs) if return_outputs else loss
+def _compute_loss(self, model, inputs, return_outputs=False):
+    input_ids = inputs.pop("input_ids")
+    prompt_lens = inputs.get("prompt_lens", None)
+    outputs = model(input_ids)
+    
+    lm_logits = outputs.logits
+    labels = input_ids
+
+    shift_logits = lm_logits[..., :-1, :].contiguous()
+    labels = labels[..., 1:].contiguous()
 
     lm_loss = cross_entropy(
         shift_logits.view(-1, shift_logits.size(-1)),
@@ -40,24 +46,31 @@ def _compute_loss(self, model, inputs, return_outputs=False):
         reduction="none",
         ignore_index=self.padding_token_id,
     )
+    
+    lm_loss = lm_loss * prompt_lens.view(-1)
 
-    if prompt_lens is not None:
-        mask = torch.zeros_like(labels, dtype=torch.float)
-        for i, last_idx in enumerate(prompt_lens):
-            mask[i, : last_idx + 1] = 1
-        flattened_mask = mask.view(-1)
-        weighted_mask = (
-            flattened_mask * self.prompt_loss_weight + (1 - flattened_mask)
-        )
-        lm_loss *= weighted_mask
+    # if prompt_lens is not None:
+    #     mask = torch.zeros_like(labels, dtype=torch.float)
+    #     for i, last_idx in enumerate(prompt_lens):
+    #         mask[i, : last_idx + 1] = 1
+    #     flattened_mask = mask.view(-1)
+    #     weighted_mask = (
+    #         flattened_mask * self.prompt_loss_weight + (1 - flattened_mask)
+    #     )
+    #     lm_loss *= weighted_mask
         
-        del mask
-        del flattened_mask
-        del weighted_mask
-        del shift_logits
-        del labels
+    #     # eagerly deleting as much as possible as we have had issues with GPU memory leaks
+    #     del mask
+    #     del flattened_mask
+    #     del weighted_mask
 
+    # del shift_logits
+    # del labels
+        
     loss = lm_loss.mean()
+    # print(f"custom loss: {loss.item()}")
+    # print(f"mode loss: {outputs2.loss.item()}")
+    # exit()
     return (loss, outputs) if return_outputs else loss
 
     # if len(logits) == 1:
@@ -207,6 +220,7 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
         pad_to_multiple_of=None,
         label_pad_token_id=-100,
         return_tensors="pt",
+        prompt_loss_weight:float = 0.1,
     ):
         # super().__init__(
         #     tokenizer=tokenizer,
@@ -214,6 +228,7 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
         #     pad_to_multiple_of=pad_to_multiple_of,
         #     return_tensors=return_tensors,
         # )
+        self.prompt_loss_weight = prompt_loss_weight
         super().__init__(
             tokenizer=tokenizer,
             model=model,
@@ -228,7 +243,6 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
         # turns out this is not necessary if remove_unused_columns is set to False (as unused is determined by the partiuclar model signature) in trainer.py
         batch = super().__call__(features, return_tensors="pt")
         # Add prompt_lens if it exists in any of the features.
-        # print("*" * 100)
         # print(type(features[0]))
         # print(type(batch))
         # print(features[0].keys())
@@ -237,7 +251,25 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
         #     batch["prompt_lens"] = torch.tensor(
         #         [feature.get("prompt_lens", 0) for feature in features]
         #     )
-        # print(batch.keys())
+        batch_size, seq_len = batch["input_ids"].size()
+        # print("*" * 100)
+        # print(batch["prompt_lens"])
+        # here the tensors are still on the CPU
+        # `seq_len - 1` because we are using all of this for causal LM and this 
+        # accounts for the shift # we want the last prompt token to be included 
+        # in the loss as it corresponds to the  first predicted token of th
+        # model.                         \/
+        arange_mask = torch.arange(seq_len - 1).expand(batch_size, -1)
+        # `batch["prompt_lens"] - 1` at the same time we shorten the patting by one to make the shapes 
+        # compatible later on.            \/
+        mask = (arange_mask < (batch["prompt_lens"] - 1).unsqueeze(1)).float()
+        batch["prompt_lens"] = (mask * self.prompt_loss_weight + (1 - mask))
+        # print("*" * 100)
+        # print(batch["prompt_lens"])
+        # print("*" * 100)
         # print(batch)
+        
+        # print(features.device)
+        # print(batch["input_ids"].device)
         # exit()
         return batch

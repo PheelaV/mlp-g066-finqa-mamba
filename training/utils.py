@@ -301,7 +301,7 @@ def get_dataset(args, tokenizer):
     else:
         print("Loading dataset from remote")
 
-    dataset_list = load_dataset(args.ou, args.dataset, args.from_remote_data)
+    dataset_list = load_dataset(args, args.dataset, args.from_remote_data)
     dataset_train = datasets.concatenate_datasets(
         [d["train"] for d in dataset_list]
     ).shuffle(seed=42)

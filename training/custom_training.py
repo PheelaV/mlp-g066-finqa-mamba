@@ -43,7 +43,8 @@ def _compute_loss(self, model, inputs, return_outputs=False):
     if prompt_lens is not None:
         mask = torch.zeros_like(labels, dtype=torch.float)
         for i, last_idx in enumerate(prompt_lens):
-            mask[i, : last_idx + 1] = 1
+            mask[i, : last_idx] = 1
+            # mask[i, : last_idx + 1] = 1
         flattened_mask = mask.view(-1)
         weighted_mask = (
             flattened_mask * self.prompt_loss_weight + (1 - flattened_mask)

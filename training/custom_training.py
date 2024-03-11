@@ -16,6 +16,7 @@ from transformers.trainer_pt_utils import nested_detach
 def _compute_loss(self, model, inputs, return_outputs=False):
     input_ids = inputs.pop("input_ids")
     # prompt_lens = inputs.get("prompt_lens", None)
+    prompt_lens = int(len(input_ids) * 0.8)
     outputs = model(input_ids)
     
     lm_logits = outputs.logits
@@ -24,39 +25,39 @@ def _compute_loss(self, model, inputs, return_outputs=False):
     shift_logits = lm_logits[..., :-1, :].contiguous()
     labels = labels[..., 1:].contiguous()
     
-    loss = cross_entropy(
-        shift_logits.view(-1, shift_logits.size(-1)),
-        labels.view(-1),
-        # reduction="none",
-        ignore_index=self.padding_token_id,
-    )
-    return (loss, outputs) if return_outputs else loss
-
-    # lm_loss = cross_entropy(
+    # loss = cross_entropy(
     #     shift_logits.view(-1, shift_logits.size(-1)),
     #     labels.view(-1),
-    #     reduction="none",
+    #     # reduction="none",
     #     ignore_index=self.padding_token_id,
     # )
-
-    # if prompt_lens is not None:
-    #     mask = torch.zeros_like(labels, dtype=torch.float)
-    #     for i, last_idx in enumerate(prompt_lens):
-    #         mask[i, : last_idx + 1] = 1
-    #     flattened_mask = mask.view(-1)
-    #     weighted_mask = (
-    #         flattened_mask * self.prompt_loss_weight + (1 - flattened_mask)
-    #     )
-    #     lm_loss *= weighted_mask
-        
-    #     del mask
-    #     del flattened_mask
-    #     del weighted_mask
-    #     del shift_logits
-    #     del labels
-
-    # loss = lm_loss.mean()
     # return (loss, outputs) if return_outputs else loss
+
+    lm_loss = cross_entropy(
+        shift_logits.view(-1, shift_logits.size(-1)),
+        labels.view(-1),
+        reduction="none",
+        ignore_index=self.padding_token_id,
+    )
+
+    if prompt_lens is not None:
+        mask = torch.zeros_like(labels, dtype=torch.float)
+        for i, last_idx in enumerate(prompt_lens):
+            mask[i, : last_idx + 1] = 1
+        flattened_mask = mask.view(-1)
+        weighted_mask = (
+            flattened_mask * self.prompt_loss_weight + (1 - flattened_mask)
+        )
+        lm_loss *= weighted_mask
+        
+        del mask
+        del flattened_mask
+        del weighted_mask
+        del shift_logits
+        del labels
+
+    loss = lm_loss.mean()
+    return (loss, outputs) if return_outputs else loss
 
     # if len(logits) == 1:
     #     logits = logits[0]

@@ -71,7 +71,7 @@ lora_config = LoraConfig(
 )
 
 complete_args = {}
-complete_args["prompt_loss_weight"] = 0.1
+complete_args["prompt_loss_weight"] = 1.0
 
 # instruction_template = "Instruction: :"
 # response_template = "Answer: "
@@ -93,4 +93,18 @@ trainer = SFTTrainer(
     # tokenized_datasets=True,
     # prompt_loss_weight=complete_args["prompt_loss_weight"]
 )
+# trainer = SFTTrainer(
+#     model=model,
+#     tokenizer=tokenizer,
+#     args=training_args,
+#     peft_config=lora_config,
+#     train_dataset=dataset["train"],
+#     eval_dataset=dataset["test"],
+#     max_seq_length=512,
+#     dataset_text_field="input_ids",
+#     # data_collator=collator
+#     # data_collator=custom_training.CustomDataCollatorSeq2Seq(tokenizer, padding=True),
+#     # tokenized_datasets=True,
+#     prompt_loss_weight=complete_args["prompt_loss_weight"]
+# )
 trainer.train()

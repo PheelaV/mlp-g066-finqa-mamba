@@ -188,7 +188,7 @@ def parse_model_name(name, from_remote=False):
         )
 
 
-def load_dataset(names, from_remote=False):
+def load_dataset(args, names, from_remote=False):
     """
     Load one or multiple datasets based on the provided names and source location.
 
@@ -217,7 +217,7 @@ def load_dataset(names, from_remote=False):
 
         # Construct the correct dataset path or name based on the source location
         dataset_path_or_name = (
-            "FinGPT/fingpt-" if from_remote else "data/fingpt-"
+            "FinGPT/fingpt-" if from_remote else os.path.join(args.output_dir ,"data/fingpt-")
         ) + dataset_name
         
         if not os.path.exists(dataset_path_or_name) and not from_remote:
@@ -230,7 +230,7 @@ def load_dataset(names, from_remote=False):
         # Load the dataset
         try:
             tmp_dataset = (
-                datasets.load_dataset(dataset_path_or_name)
+                datasets.load_dataset(args, dataset_path_or_name)
                 if from_remote
                 else datasets.load_from_disk(dataset_path_or_name)
             )
@@ -294,18 +294,19 @@ def get_dataset(args, tokenizer):
     print(dataset_id)
     # if dataset is already tokenized, load it
     # unless we specifically want the remote version
-    if (not args.from_remote_data) and os.path.exists(f"data/{dataset_id}"):
+    cache_dataset_path = os.path.join(args.output_dir, f"data/{dataset_id}")
+    if (not args.from_remote_data) and os.path.exists(cache_dataset_path):
         print("Using cached dataset")
-        return datasets.load_from_disk(f"data/{dataset_id}")
+        return datasets.load_from_disk(cache_dataset_path)
     else:
         print("Loading dataset from remote")
 
-    dataset_list = load_dataset(args.dataset, args.from_remote_data)
+    dataset_list = load_dataset(args.ou, args.dataset, args.from_remote_data)
     dataset_train = datasets.concatenate_datasets(
         [d["train"] for d in dataset_list]
     ).shuffle(seed=42)
     if args.test_dataset:
-        dataset_list = load_dataset(args.test_dataset, args.from_remote_data)
+        dataset_list = load_dataset(args, args.test_dataset, args.from_remote_data)
     dataset_test = datasets.concatenate_datasets([d["test"] for d in dataset_list])
     dataset = datasets.DatasetDict({"train": dataset_train, "test": dataset_test})
     # Display first sample from the training dataset

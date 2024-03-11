@@ -17,7 +17,7 @@ def _compute_loss(self, model, inputs, return_outputs=False):
     input_ids = inputs.pop("input_ids")
     prompt_lens = inputs.get("prompt_lens", None)
     outputs = model(input_ids)
-    print(input_ids.device)
+    
     lm_logits = outputs.logits
     labels = input_ids
     #.to(lm_logits.device)
@@ -42,8 +42,11 @@ def _compute_loss(self, model, inputs, return_outputs=False):
         )#.to(lm_loss.device)
         lm_loss *= weighted_mask
         
+        del mask
         del flattened_mask
         del weighted_mask
+        del shift_logits
+        del labels
 
     loss = lm_loss.mean()
     return (loss, outputs) if return_outputs else loss

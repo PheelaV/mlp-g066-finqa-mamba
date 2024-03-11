@@ -22,7 +22,6 @@ parser.add_argument("--model_size", type=str)
 parser.add_argument("--lora", type=bool, default=False)
 parser.add_argument("--model_type", type=str)
 args = parser.parse_args()
-
 if args.model_type == "pythia":
   target_modules=["query_key_value"],
   if args.model_size == "l":

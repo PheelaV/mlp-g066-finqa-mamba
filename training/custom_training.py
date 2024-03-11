@@ -24,32 +24,38 @@ def _compute_loss(self, model, inputs, return_outputs=False):
     shift_logits = lm_logits[..., :-1, :].contiguous()
     labels = labels[..., 1:].contiguous()
     # labels = labels[:, 1:].contiguous()
-
-    lm_loss = cross_entropy(
+    loss = cross_entropy(
         shift_logits.view(-1, shift_logits.size(-1)),
         labels.view(-1),
-        reduction="none",
+        # reduction="none",
         ignore_index=self.padding_token_id,
     )
-
-    if prompt_lens is not None:
-        mask = torch.zeros_like(labels, dtype=torch.float)
-        for i, last_idx in enumerate(prompt_lens):
-            mask[i, : last_idx + 1] = 1
-        flattened_mask = mask.view(-1)
-        weighted_mask = (
-            flattened_mask * self.prompt_loss_weight + (1 - flattened_mask)
-        )#.to(lm_loss.device)
-        lm_loss *= weighted_mask
-        
-        del mask
-        del flattened_mask
-        del weighted_mask
-        del shift_logits
-        del labels
-
-    loss = lm_loss.mean()
     return (loss, outputs) if return_outputs else loss
+    # lm_loss = cross_entropy(
+    #     shift_logits.view(-1, shift_logits.size(-1)),
+    #     labels.view(-1),
+    #     reduction="none",
+    #     ignore_index=self.padding_token_id,
+    # )
+
+    # if prompt_lens is not None:
+    #     mask = torch.zeros_like(labels, dtype=torch.float)
+    #     for i, last_idx in enumerate(prompt_lens):
+    #         mask[i, : last_idx + 1] = 1
+    #     flattened_mask = mask.view(-1)
+    #     weighted_mask = (
+    #         flattened_mask * self.prompt_loss_weight + (1 - flattened_mask)
+    #     )#.to(lm_loss.device)
+    #     lm_loss *= weighted_mask
+        
+    #     del mask
+    #     del flattened_mask
+    #     del weighted_mask
+    #     del shift_logits
+    #     del labels
+
+    # loss = lm_loss.mean()
+    # return (loss, outputs) if return_outputs else loss
 
     # if len(logits) == 1:
     #     logits = logits[0]
@@ -165,9 +171,9 @@ class CustomTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs: bool = False):
         return _compute_loss(self, model, inputs, return_outputs=return_outputs)
     
-    def prediction_step(self, model: Module, inputs: Dict[str, torch.Tensor | Any], prediction_loss_only: bool, ignore_keys: List[str] | None = None) -> Tuple[torch.Tensor | None]:
-        # return super().prediction_step(model, inputs, prediction_loss_only, ignore_keys)
-        return _prediction_step(self, model, inputs, prediction_loss_only, ignore_keys)
+    # def prediction_step(self, model: Module, inputs: Dict[str, torch.Tensor | Any], prediction_loss_only: bool, ignore_keys: List[str] | None = None) -> Tuple[torch.Tensor | None]:
+    #     # return super().prediction_step(model, inputs, prediction_loss_only, ignore_keys)
+    #     return _prediction_step(self, model, inputs, prediction_loss_only, ignore_keys)
 
 
     # this is for saving the full model

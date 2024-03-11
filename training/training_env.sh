@@ -31,8 +31,12 @@ conda install -y pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconve
 
 # for mamba 
 # You need to install transformers from main until transformers=4.39.0 is released.
+# this might give an import error in which case just into 
+# ~/miniconda3/envs/mlp_g066_training/lib/python3.11/site-packages/trl/core.py
+# and comment out the import statement that is being reported "something top k blah blah"
 # https://huggingface.co/state-spaces/mamba-2.8b-hf 
 pip install git+https://github.com/huggingface/transformers@main
+
 pip install -U datasets trl wandb peft
 pip install causal-conv1d>=1.2.0
 pip install mamba-ssm

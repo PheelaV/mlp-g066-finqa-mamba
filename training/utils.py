@@ -2,10 +2,7 @@
 import os
 import datasets
 import custom_training
-from transformers import (
-    AutoTokenizer,
-    TrainingArguments
-)
+from transformers import AutoTokenizer, TrainingArguments
 import datasets
 from functools import partial
 import torch
@@ -28,6 +25,50 @@ lora_module_dict = {
     "pythia": ["query_key_value"],
     "mamba": ["x_proj", "embeddings", "in_proj", "out_proj"],
 }
+
+
+def parse_model_name(name, from_remote=False):
+    """
+    Parse the model name and return the appropriate path based on whether
+    the model is to be fetched from a remote source or from a local source.
+
+    Args:
+    - name (str): Name of the model.
+    - from_remote (bool): If True, return the remote path, else return the local path.
+
+    Returns:
+    - str: The appropriate path for the given model name.
+    """
+    model_paths = {
+        # 'chatglm2': ('THUDM/chatglm2-6b', 'base_models/chatglm2-6b'),
+        # 'llama2': ('meta-llama/Llama-2-7b-hf', 'base_models/Llama-2-7b-hf'),
+        # 'llama2-13b': ('meta-llama/Llama-2-13b-hf', 'base_models/Llama-2-13b-hf'),
+        # 'llama2-13b-nr': ('NousResearch/Llama-2-13b-hf', 'base_models/Llama-2-13b-hf'),
+        # 'falcon': ('tiiuae/falcon-7b', 'base_models/falcon-7b'),
+        # 'internlm': ('internlm/internlm-7b', 'base_models/internlm-7b'),
+        # 'qwen': ('Qwen/Qwen-7B', 'base_models/Qwen-7B'),
+        # 'baichuan': ('baichuan-inc/Baichuan2-7B-Base', 'base_models/Baichuan2-7B-Base'),
+        # 'mpt': ('cekal/mpt-7b-peft-compatible', 'base_models/mpt-7b-peft-compatible'),
+        # 'bloom': ('bigscience/bloom-7b1', 'base_models/bloom-7b1'),
+        "mamba-small": ("state-spaces/mamba-130m-hf", "base_models/mamba-130m-hf"),
+        "pythia-small": (
+            "EleutherAI/pythia-70m-deduped",
+            "base_models/pythia-70m-deduped",
+        ),
+        "mamba-big": ("state-spaces/mamba-2.8b-hf", "base_models/mamba-2.8b-hf"),
+        "pythia-big": (
+            "EleutherAI/pythia-2.8b-deduped",
+            "base_models/pythia-2.8b-deduped",
+        ),
+    }
+
+    if name in model_paths:
+        return model_paths[name][0] if from_remote else model_paths[name][1]
+    else:
+        valid_model_names = ", ".join(model_paths.keys())
+        raise ValueError(
+            f"Undefined base model '{name}'. Valid model names are: {valid_model_names}"
+        )
 
 
 def get_prompt(template, instruction, input_text):
@@ -86,7 +127,7 @@ def test_mapping(args, feature):
     }
 
 
-def tokenize(args, tokenizer, feature, prompt_in_label=False):
+def tokenize(args, tokenizer, feature, prompt_in_label=False, return_text=False):
     """
     Tokenizes the input prompt and target/output for model training or evaluation.
 
@@ -106,6 +147,7 @@ def tokenize(args, tokenizer, feature, prompt_in_label=False):
     prompt_ids = tokenizer(
         prompt, padding=False, max_length=args.max_length, truncation=True
     )["input_ids"]
+    prompt_lens = len(prompt_ids)
 
     # Tokenize the target/output.
     target_ids = tokenizer(
@@ -122,13 +164,21 @@ def tokenize(args, tokenizer, feature, prompt_in_label=False):
     # Check if the combined length exceeds the maximum allowed length.
     exceed_max_length = len(input_ids) >= args.max_length
 
+    # this is to investigate a memory leak, just desperately trying stuff
+    # by replacing with reference code
+    if return_text:
+        return {
+            "input_ids": prompt,
+            "labels": prompt,
+            "exceed_max_length": exceed_max_length,
+            "prompt_lens": prompt_lens,
+        }
+
     # Add an end-of-sequence (EOS) token if it's not already present
     # and if the sequence length is within the limit.
     if input_ids[-1] != tokenizer.eos_token_id and not exceed_max_length:
         input_ids.append(tokenizer.eos_token_id)
-    prompt_lens = len(prompt_ids)
 
-    #
     if not prompt_in_label:
         # Create label IDs for training.
         # The labels should start from where the prompt ends, and be padded for the prompt portion.
@@ -142,50 +192,6 @@ def tokenize(args, tokenizer, feature, prompt_in_label=False):
         "exceed_max_length": exceed_max_length,
         "prompt_lens": prompt_lens,
     }
-
-
-def parse_model_name(name, from_remote=False):
-    """
-    Parse the model name and return the appropriate path based on whether
-    the model is to be fetched from a remote source or from a local source.
-
-    Args:
-    - name (str): Name of the model.
-    - from_remote (bool): If True, return the remote path, else return the local path.
-
-    Returns:
-    - str: The appropriate path for the given model name.
-    """
-    model_paths = {
-        # 'chatglm2': ('THUDM/chatglm2-6b', 'base_models/chatglm2-6b'),
-        # 'llama2': ('meta-llama/Llama-2-7b-hf', 'base_models/Llama-2-7b-hf'),
-        # 'llama2-13b': ('meta-llama/Llama-2-13b-hf', 'base_models/Llama-2-13b-hf'),
-        # 'llama2-13b-nr': ('NousResearch/Llama-2-13b-hf', 'base_models/Llama-2-13b-hf'),
-        # 'falcon': ('tiiuae/falcon-7b', 'base_models/falcon-7b'),
-        # 'internlm': ('internlm/internlm-7b', 'base_models/internlm-7b'),
-        # 'qwen': ('Qwen/Qwen-7B', 'base_models/Qwen-7B'),
-        # 'baichuan': ('baichuan-inc/Baichuan2-7B-Base', 'base_models/Baichuan2-7B-Base'),
-        # 'mpt': ('cekal/mpt-7b-peft-compatible', 'base_models/mpt-7b-peft-compatible'),
-        # 'bloom': ('bigscience/bloom-7b1', 'base_models/bloom-7b1'),
-        "mamba-small": ("state-spaces/mamba-130m-hf", "base_models/mamba-130m-hf"),
-        "pythia-small": (
-            "EleutherAI/pythia-70m-deduped",
-            "base_models/pythia-70m-deduped",
-        ),
-        "mamba-big": ("state-spaces/mamba-2.8b-hf", "base_models/mamba-2.8b-hf"),   
-        "pythia-big": (
-            "EleutherAI/pythia-2.8b-deduped",
-            "base_models/pythia-2.8b-deduped",
-        ),
-    }
-
-    if name in model_paths:
-        return model_paths[name][0] if from_remote else model_paths[name][1]
-    else:
-        valid_model_names = ", ".join(model_paths.keys())
-        raise ValueError(
-            f"Undefined base model '{name}'. Valid model names are: {valid_model_names}"
-        )
 
 
 def load_dataset(args, names, from_remote=False):
@@ -217,20 +223,23 @@ def load_dataset(args, names, from_remote=False):
 
         # Construct the correct dataset path or name based on the source location
         dataset_path_or_name = (
-            "FinGPT/fingpt-" if from_remote else os.path.join(args.output_dir ,"data/fingpt-")
+            "FinGPT/fingpt-"
+            if from_remote
+            else os.path.join(args.output_dir, "data/fingpt-")
         ) + dataset_name
-        
+
         if not os.path.exists(dataset_path_or_name) and not from_remote:
             print(
                 f"The dataset path {dataset_path_or_name} does not exist, trying remote."
             )
             dataset_path_or_name = f"FinGPT/fingpt-{dataset_name}"
             from_remote = True
+        print(f"Loading dataset: {dataset_path_or_name}")
 
         # Load the dataset
         try:
             tmp_dataset = (
-                datasets.load_dataset(args, dataset_path_or_name)
+                datasets.load_dataset(dataset_path_or_name)
                 if from_remote
                 else datasets.load_from_disk(dataset_path_or_name)
             )
@@ -267,19 +276,26 @@ def get_tokenizer(args, model_name):
     return tokenizer
 
 
-def get_dataset(args, tokenizer):
+def get_dataset(args, tokenizer, return_text=True):
     """
     Load the dataset and apply tokenization
-    
+
     Args:
-    - args (Namespace): A namespace object containing various settings and configurations.
+    - args (Namespace): A namespace object containing various settings and
+        configurations.
         - dataset (str): The name of the dataset to be loaded.
-        - max_length (int): The maximum token length allowed for the input and output sequences.
-        - from_remote_data (bool): If True, load the dataset from Hugging Face's model hub. Otherwise, load it from a local disk.
-        - test_dataset (str): The name of the test dataset to be loaded, optional.
-        - instruct_template (str): The key to select the prompt template from the predefined dictionary.
-        - num_workers (int): The number of workers to use for parallel processing, optional.
-    - tokenizer (Tokenizer): A tokenizer object used to convert text into tokens.
+        - max_length (int): The maximum token length allowed for the input and
+            output sequences.
+        - from_remote_data (bool): If True, load the dataset from Hugging Face's
+            model hub. Otherwise, load it from a local disk.
+        - test_dataset (str): The name of the test dataset to be loaded,
+            optional.
+        - instruct_template (str): The key to select the prompt template from
+            the predefined dictionary.
+        - num_workers (int): The number of workers to use for parallel
+            processing, optional.
+    - tokenizer (Tokenizer): A tokenizer object used to convert text into
+        tokens.
     """
     tok_cls_name = (
         tokenizer.__class__.__name__[:-4]
@@ -288,14 +304,14 @@ def get_dataset(args, tokenizer):
     )
 
     # for persistence
-    dataset_name  = args.dataset.replace(",", "_").replace("*", "")
+    dataset_name = args.dataset.replace(",", "_").replace("*", "")
 
     dataset_id = f"{dataset_name}_{args.max_length}_{tok_cls_name}"
     print(dataset_id)
     # if dataset is already tokenized, load it
     # unless we specifically want the remote version
     cache_dataset_path = os.path.join(args.output_dir, f"data/{dataset_id}")
-    if (not args.from_remote_data) and os.path.exists(cache_dataset_path):
+    if (not args.from_remote_data) and os.path.exists(cache_dataset_path) and not return_text:
         print("Using cached dataset")
         return datasets.load_from_disk(cache_dataset_path)
     else:
@@ -313,7 +329,9 @@ def get_dataset(args, tokenizer):
     # print(dataset["train"][0])
     # Filter out samples that exceed the maximum token length and remove unused columns
     dataset = dataset.map(
-        partial(tokenize, args, tokenizer, prompt_in_label=True),
+        partial(
+            tokenize, args, tokenizer, prompt_in_label=True, return_text=return_text
+        ),
         # num_proc=args.num_workers,
     )
     print("original dataset length: ", len(dataset["train"]))
@@ -323,7 +341,8 @@ def get_dataset(args, tokenizer):
         ["instruction", "input", "output", "exceed_max_length"]
     )
 
-    dataset.save_to_disk(f"data/{dataset_id}")
+    if not return_text:
+        dataset.save_to_disk(f"data/{dataset_id}")
 
     return dataset
 
@@ -335,11 +354,13 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
 
     common_args = {
         "run_name": args.run_name,
-        "output_dir": os.path.join(args.output_dir, "finetuned_models", f"{args.run_name}_{formatted_time}"),
+        "output_dir": os.path.join(
+            args.output_dir, "finetuned_models", f"{args.run_name}_{formatted_time}"
+        ),
         "num_train_epochs": args.num_epochs,
         # "dataloader_num_workers": args.num_workers,
-        "remove_unused_columns": False, # maybe remove
-        #-------------------------------------------
+        "remove_unused_columns": False,  # maybe remove
+        # -------------------------------------------
         "report_to": "wandb",
         "logging_dir": os.path.join(args.output_dir, "logs"),
         "logging_steps": args.log_interval,
@@ -347,7 +368,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "eval_steps": args.eval_steps,
         "evaluation_strategy": args.evaluation_strategy,
         "eval_accumulation_steps": args.eval_accumulation_steps,
-        #-------------------------------------------
+        # -------------------------------------------
         "learning_rate": args.learning_rate,
         "warmup_ratio": args.warmup_ratio,
         "lr_scheduler_type": args.scheduler,
@@ -407,8 +428,8 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
                 tokenizer, padding=True
             ),
             prompt_loss_weight=args.prompt_loss_weight,
-            max_seq_length=args.max_length, # just to keep the warning silent as we are handling this ourselves
-            tokenized_datasets=True, # the secret sauce to make this work
+            max_seq_length=args.max_length,  # just to keep the warning silent as we are handling this ourselves
+            tokenized_datasets=True,  # the secret sauce to make this work
         )
 
         # update args for logging

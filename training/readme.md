@@ -16,28 +16,19 @@ https://vitalflux.com/distributed-llm-training-explained-with-examples/
 # Experiment 1
 
 from FinGpT "Multi-task Instruction Tuning"
-
+<!-- CUDA_VISIBLE_DEVICES=0 -->
 ```
 python train.py \
---run_name \ 
---dataset sentiment-train,headline,finred*3,ner*15 \
---max_length 2048 \
+    --run_name "pythia_s_mt_0-1" \
+    --base_model pythia-small \
+    --prompt_loss_weight 0.1 \
+    --max_length 512 \
+    --config config_mt.json \
+    --dataset "sentiment-train,headline,finred*3,ner*15" \
+    --eval_accumulation_steps 8 \
+    --distributed 1 \
 >train.log 2>&1 &
 ```
-tail -f train.log
-to check the training log
-
-Multi-task Instruction Tuning
-deepspeed train_lora.py \
---run_name MT-falcon-linear \
---base_model falcon \
---dataset sentiment-train,headline,finred*3,ner*15 \
---max_length 512 \
---batch_size 4 \
---learning_rate 1e-4 \
---num_epochs 4
-
-
 
 # trash
 
@@ -48,3 +39,29 @@ OOM on wood
 ```
 python train.py --run_name pythia_big_paged_ad  --config config_test.json --lora_r 0 --base_model pythia-big --gradient_steps 4 --optim paged_adamw_8bit --batch_size 1
 ```
+
+```sh
+python train.py --run_name dataset_warmup \
+    --dataset "sentiment-train,headline,finred*3,ner*15" \
+    --max_length 512  \
+    --config config_test.json \
+    --num_epochs 1
+ ```
+
+ ```
+accelerate launch train.py --run_name dataset_warmup \
+    --dataset "sentiment-train,headline,finred*3,ner*15" \
+    --max_length 512  \
+    --config config_test.json \
+    --num_epochs 1 \
+    --distributed 1
+ ```
+
+
+<!-- sinfo -o "%50N  %10c  %20m  %30G " -->
+<!-- srun --gres=gpu:a6000:1 --pty bash -->
+
+<!-- sbatch emnist_single_gpu_tutorial.sh -->
+<!-- smap -->
+<!-- squeue -->
+<!-- sinfo -->  

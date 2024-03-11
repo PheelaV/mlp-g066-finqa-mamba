@@ -1,7 +1,7 @@
 {
     "local_rank": 0,
     "lora_r": 0,
-    "run_name": "mamba_mt_small",
+    "run_name": "rename_me",
     "dataset": "sentiment-train,headline,finred*3,ner*15",
     "test_dataset": null,
     "base_model": "pythia-small",

@@ -224,7 +224,7 @@ if __name__ == "__main__":
         required=False,
         default="pythia-small",
         type=str,
-        choices=["mamba-small", "pythia-small", "mamba-big", "pythia-big"],
+        # choices=["mamba-small", "pythia-small", "mamba-medium", "pythia-small", "mamba-big", "pythia-big"],
     )
     parser.add_argument("--max_length", default=512, type=int)
     # parser.add_argument("--max_length", default=2048, type=int)

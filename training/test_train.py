@@ -14,7 +14,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--model_size", type=str)
 parser.add_argument("--lora", type=bool, default=False)
 parser.add_argument("--model_type", type=str)
-parser.add_argument("--test_feature", type=bool, default=False)
 parser.add_argument("--seq_len", type=int, default=512)
 args = parser.parse_args()
 if args.model_type == "pythia":
@@ -105,7 +104,7 @@ trainer = SFTTrainer(
     max_seq_length=args.seq_len,
     # dataset_text_field="input_ids", # not nescessary as we are using a customized trainer
     data_collator=custom_training.CustomDataCollatorSeq2Seq(
-        tokenizer, padding=True, prompt_loss_weight=complete_args["prompt_loss_weight"], test_feature=args.test_feature
+        tokenizer, padding=True, prompt_loss_weight=complete_args["prompt_loss_weight"]
     ),
     tokenized_datasets=True,
     prompt_loss_weight=complete_args["prompt_loss_weight"],

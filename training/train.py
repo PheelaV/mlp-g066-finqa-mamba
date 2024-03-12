@@ -282,13 +282,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--from_remote_data",
         default=False,
-        type=bool,
+        action=argparse.BooleanOptionalAction,
         help="Fetch the dataset form hugging face",
     )
     parser.add_argument(
         "--from_remote_model",
         default=True,
-        type=bool,
+        action=argparse.BooleanOptionalAction,
         help="Fetch the model form hugging face",
     )
     parser.add_argument(
@@ -297,7 +297,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--distributed",
         default=False,
-        type=bool,
+        action=argparse.BooleanOptionalAction,
         help="Enable per device batch and gradient accumulation",
     )
     parser.add_argument(
@@ -318,7 +318,7 @@ if __name__ == "__main__":
         # this is a problem with the HF trainer
         "--eval",
         default=False,
-        type=bool,
+        action=argparse.BooleanOptionalAction,
         help="Evaluate trhoughout training",
     )
 
@@ -328,7 +328,7 @@ if __name__ == "__main__":
     #     parser.parse_known_args("") if is_interactive() else parser.parse_known_args()
     # )
     config_args = parser.parse_args("") if is_interactive() else parser.parse_args()
-    print(config_args.seed_data)
+
     json_config_path = (
         config_args.config
     )  # Use the --config command line argument to specify JSON config file
@@ -347,7 +347,6 @@ if __name__ == "__main__":
         args.num_workers = int(args.num_workers)
     else:
         raise ValueError("num_workers must be 'all' or an integer")
-    print(args.seed_data)
-    exit()
+
     main(args)
 

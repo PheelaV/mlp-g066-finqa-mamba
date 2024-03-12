@@ -14,7 +14,7 @@ parser.add_argument("--model_size", type=str)
 parser.add_argument("--lora", type=bool, default=False)
 parser.add_argument("--model_type", type=str)
 parser.add_argument("--seq_len", type=int, default=512)
-parser.add_argument("--reference", type=argparse.BooleanOptionalAction)
+parser.add_argument("--reference", default=False, action=argparse.BooleanOptionalAction)
 
 args = parser.parse_args()
 

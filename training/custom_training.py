@@ -199,8 +199,8 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
     def __call__(self, features: Sequence[Dict]) -> Dict:
         # turns out this is not necessary if remove_unused_columns is set to False (as unused is determined by the partiuclar model signature) in trainer.py
         batch = super().__call__(features, return_tensors="pt")
-        if self.prompt_loss_weight == 1:
-            return batch
+        # if self.prompt_loss_weight == 1:
+        #     return batch
         batch_size, seq_len = batch["input_ids"].size()
         # here the tensors are still on the CPU
         # `seq_len - 1` because we are using all of this for causal LM and this

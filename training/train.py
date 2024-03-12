@@ -59,41 +59,39 @@ def load_config(json_filepath):
     return {}
 
 
-# Trying to nail down OOMs
-
 # In[ ]:
 
 
-import logging
-import socket
-from datetime import datetime, timedelta
+# import logging
+# import socket
+# from datetime import datetime, timedelta
 
-import torch
+# import torch
 
-from torch.autograd.profiler import record_function
-from torchvision import models
+# from torch.autograd.profiler import record_function
+# from torchvision import models
 
-logging.basicConfig(
-   format="%(levelname)s:%(asctime)s %(message)s",
-   level=logging.INFO,
-   datefmt="%Y-%m-%d %H:%M:%S",
-)
-logger: logging.Logger = logging.getLogger(__name__)
-logger.setLevel(level=logging.INFO)
+# logging.basicConfig(
+#    format="%(levelname)s:%(asctime)s %(message)s",
+#    level=logging.INFO,
+#    datefmt="%Y-%m-%d %H:%M:%S",
+# )
+# logger: logging.Logger = logging.getLogger(__name__)
+# logger.setLevel(level=logging.INFO)
 
-TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
+# TIME_FORMAT_STR: str = "%b_%d_%H_%M_%S"
 
-def trace_handler(prof: torch.profiler.profile):
-   # Prefix for file names.
-   host_name = socket.gethostname()
-   timestamp = datetime.now().strftime(TIME_FORMAT_STR)
-   file_prefix = f"{host_name}_{timestamp}"
+# def trace_handler(prof: torch.profiler.profile):
+#    # Prefix for file names.
+#    host_name = socket.gethostname()
+#    timestamp = datetime.now().strftime(TIME_FORMAT_STR)
+#    file_prefix = f"{host_name}_{timestamp}"
 
-   # Construct the trace file.
-   prof.export_chrome_trace(f"{file_prefix}.json.gz")
+#    # Construct the trace file.
+#    prof.export_chrome_trace(f"{file_prefix}.json.gz")
 
-   # Construct the memory timeline file.
-   prof.export_memory_timeline(f"{file_prefix}.html", device="cuda:0")
+#    # Construct the memory timeline file.
+#    prof.export_memory_timeline(f"{file_prefix}.html", device="cuda:0")
 
 
 # In[3]:
@@ -107,16 +105,16 @@ def main(args):
         if torch.backends.mps.is_available()
         else torch.device("cpu")
     )
-    if not os.path.exists(os.path.join(args.output_dir, "data")):
-        os.makedirs("data")
-    if not os.path.exists(os.path.join(args.output_dir, "finetuned_models")):
-        os.makedirs("finetuned_models")
-        
-    mode = "interactive" if IS_INTERACTIVE else "non-interactive"
+    data_dir_path = os.path.join(args.working_dir, "data")
+    model_dir_path = os.path.join(args.working_dir, "finetuned_models")
+    if not os.path.exists(data_dir_path):
+        os.makedirs(data_dir_path)
+    if not os.path.exists(model_dir_path):
+        os.makedirs(model_dir_path)
 
     if args.local_rank == 0:
         print(
-            f"Script is running in {mode} mode"
+            f'Script is running in {"interactive" if IS_INTERACTIVE else "non-interactive"} mode'
         )
 
     if IS_INTERACTIVE:
@@ -129,21 +127,24 @@ def main(args):
         reload(utils)
 
     # Parse the model name and determine if it should be fetched from a remote source
-    model_name = utils.parse_model_name(args.base_model, args.from_remote_model)
+    model_name = utils.parse_model_name(args)
     if args.local_rank == 0:
         print(f"Using model: {model_name}")
-    
-    os.environ["TOKENIZERS_PARALLELISM"] = "true"
+
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     tokenizer = utils.get_tokenizer(args, model_name)
     dataset = utils.get_dataset(args, tokenizer)
     if args.local_rank == 0:
         print(f"Dataset loaded: {dataset}")
 
+    if args.seed_data:
+        exit()
+    
     if "mamba" in args.base_model:
         model = AutoModelForCausalLM.from_pretrained(model_name)
-        model.config.use_cache = False # https://github.com/huggingface/transformers/issues/29505
+        # https://github.com/huggingface/transformers/issues/29505
+        model.config.use_cache = False
     else:
-
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             # load_in_8bit=True,
@@ -154,14 +155,13 @@ def main(args):
     # Print model architecture for the first process in distributed training
     if args.local_rank == 0:
         print(model)
-        
+
     # Create a timestamp for model saving
     current_time = datetime.now()
     formatted_time = current_time.strftime("%Y_%m_%d_%H%M")
 
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     tokenizer = utils.get_tokenizer(args, model_name)
-
 
     if args.local_rank == 0:
         print(f"Commencing training on device: {device}, time: {formatted_time}")
@@ -175,13 +175,18 @@ def main(args):
 
     import wandb
 
-    wandb.init(project="mlp-g066-mamba", name=args.run_name, config=common_args, dir=args.output_dir)
+    wandb.init(
+        project="mlp-g066-mamba",
+        name=args.run_name,
+        config=common_args,
+        dir=args.working_dir,
+    )
 
     # return
     trainer.train()
 
     # Save the fine-tuned model
-    model.save_pretrained(training_args.output_dir)
+    model.save_pretrained(training_args.working_dir)
 
 
 # In[4]:
@@ -205,7 +210,7 @@ if __name__ == "__main__":
         "--lora_r", default=0, type=int, help="Lora rank, 0 for no lora"
     )
     parser.add_argument("--run_name", default="local-test", type=str)
-    parser.add_argument("--dataset", required=False, default="convfinqa", type=str)
+    parser.add_argument("--dataset", default="convfinqa", type=str)
     parser.add_argument("--test_dataset", type=str)
     parser.add_argument(
         "--base_model",
@@ -229,11 +234,32 @@ if __name__ == "__main__":
         type=float,
         help="The gradient accumulation steps",
     )
-    parser.add_argument("--num_workers", default=8, type=int, help="dataloader workers")
-    parser.add_argument("--warmup_ratio", default=0.05, type=float)
-    parser.add_argument("--ds_config", default="./config_new.json", type=str)
+    parser.add_argument(
+        "--num_workers",
+        default="8",
+        type=str,
+        help="Dataloader workers - number or 'all' to use all available cores",
+    )
+    parser.add_argument(
+        "--warmup_ratio",
+        default=0.05,
+        type=float,
+        help="Ration of steps used for learning rate warmup "
+        "(gradually increases LR before the normal schedule takes over)",
+    )
+    parser.add_argument(
+        "--ds_config",
+        default="./ds_config.json",
+        type=str,
+        help="Deeppspeed configuration file",
+    )
     parser.add_argument("--scheduler", default="linear", type=str)
-    parser.add_argument("--output_dir", default="./", type=str)
+    parser.add_argument(
+        "--working_dir",
+        default="./",
+        type=str,
+        help="Location where the model and logs will be saved as well as datasets read from.",
+    )
     parser.add_argument("--instruct_template", default="default")
     parser.add_argument("--load_best_model", default="False", type=bool)
     parser.add_argument("--log_interval", default=20, type=int)
@@ -248,19 +274,24 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--from_remote_data",
-        default=0,
+        default=False,
         type=bool,
+        help="Fetch the dataset form hugging face",
     )
     parser.add_argument(
         "--from_remote_model",
-        default=1,
+        default=True,
         type=bool,
+        help="Fetch the model form hugging face",
     )
     parser.add_argument(
         "--prompt_loss_weight", default=1.0, type=float, help="Prompt loss weight"
     )
     parser.add_argument(
-        "--distributed", default=False, type=bool, help="Enable deepspeed"
+        "--distributed",
+        default=False,
+        type=bool,
+        help="Enable per device batch and gradient accumulation",
     )
     parser.add_argument(
         "--fp16", default=False, type=bool, help="Enable fp16 precision"
@@ -269,9 +300,19 @@ if __name__ == "__main__":
         "--bf16", default=False, type=bool, help="Enable bf16 precision"
     )
     parser.add_argument(
+        "--seed_data",
+        default=False,
+        type=bool,
+        help="Dry run for seeding the data - say your compute node is slow or does"
+        " not have access to internet and you need to seed the data locally.",
+    )
+    parser.add_argument(
         # currently there seems to be a bug which causes OOM on too large of an evaluation set
         # this is a problem with the HF trainer
-        "--eval", default=False, type=bool, help="Evaluate trhoughout training"
+        "--eval",
+        default=False,
+        type=bool,
+        help="Evaluate trhoughout training",
     )
 
     global args  # Namespace args
@@ -291,7 +332,12 @@ if __name__ == "__main__":
     # Now parse the rest of the arguments with the updated defaults
     # args = parser.parse_args(remaining_argv)
     args = parser.parse_args("") if is_interactive() else parser.parse_args()
-
-    # Run main
+    
+    if args.num_workers == "all":
+        args.num_workers = os.cpu_count()
+    elif args.num_workers.isdigit():
+        args.num_workers = int(args.num_workers)
+    else:
+        raise ValueError("num_workers must be 'all' or an integer")
     main(args)
 

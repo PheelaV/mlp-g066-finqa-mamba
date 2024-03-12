@@ -6,6 +6,7 @@ from transformers import AutoTokenizer, TrainingArguments
 import datasets
 from functools import partial
 import torch
+import json
 
 # A dictionary to store various prompt templates.
 template_dict = {"default": "Instruction: {instruction}\nInput: {input}\nAnswer: "}
@@ -27,14 +28,15 @@ lora_module_dict = {
 }
 
 
-def parse_model_name(name, from_remote=False):
+def parse_model_name(args):
     """
     Parse the model name and return the appropriate path based on whether
     the model is to be fetched from a remote source or from a local source.
 
     Args:
-    - name (str): Name of the model.
-    - from_remote (bool): If True, return the remote path, else return the local path.
+      - args (Namespace)
+        - name (str): Name of the model.
+        - from_remote (bool): If True, return the remote path, else return the local path.
 
     Returns:
     - str: The appropriate path for the given model name.
@@ -50,24 +52,25 @@ def parse_model_name(name, from_remote=False):
         # 'baichuan': ('baichuan-inc/Baichuan2-7B-Base', 'base_models/Baichuan2-7B-Base'),
         # 'mpt': ('cekal/mpt-7b-peft-compatible', 'base_models/mpt-7b-peft-compatible'),
         # 'bloom': ('bigscience/bloom-7b1', 'base_models/bloom-7b1'),
-        "mamba-small": ("state-spaces/mamba-130m-hf", "base_models/mamba-130m-hf"),
-        "pythia-small": (
-            "EleutherAI/pythia-70m-deduped",
-            "base_models/pythia-70m-deduped",
-        ),
-        "mamba-big": ("state-spaces/mamba-2.8b-hf", "base_models/mamba-2.8b-hf"),
-        "pythia-big": (
-            "EleutherAI/pythia-2.8b-deduped",
-            "base_models/pythia-2.8b-deduped",
-        ),
+        "mamba-small": "state-spaces/mamba-130m-hf",
+        "pythia-small": "EleutherAI/pythia-70m-deduped",
+        "mamba-medium": "state-spaces/mamba-1.4b-hf",
+        "pythia-medium": "EleutherAI/pythia-1.4b-deduped",
+        "mamba-big": "state-spaces/mamba-2.8b-hf",
+        "pythia-big": "EleutherAI/pythia-2.8b-deduped",
     }
 
-    if name in model_paths:
-        return model_paths[name][0] if from_remote else model_paths[name][1]
+    if args.base_model in model_paths and args.from_remote_model:
+        return model_paths[args.base_model]
+    if args.from_remote_model:
+        print("Didn't fina remote model, Trying to get a local model.")
+
+    model_path = os.path.join(args.work_dir, "finetuned_models", args.base_model)
+    if os.path.exists(model_path):
+        return model_path
     else:
-        valid_model_names = ", ".join(model_paths.keys())
         raise ValueError(
-            f"Undefined base model '{name}'. Valid model names are: {valid_model_names}"
+            f"Undefined base model '{args.base_model}'. Valid model names are: {json.dumps(model_paths, indent=2)}"
         )
 
 
@@ -221,14 +224,14 @@ def load_dataset(args, names, from_remote=False):
             if replication_factor < 1:
                 raise ValueError("Replication factor must be a positive integer.")
 
-        # Construct the correct dataset path or name based on the source location
-        dataset_path_or_name = (
-            "FinGPT/fingpt-"
-            if from_remote
-            else os.path.join(args.output_dir, "data/fingpt-")
-        ) + dataset_name
+        if from_remote:
+            dataset_path_or_name = "FinGPT/fingpt-"
+        else:
+            dataset_path_or_name = os.path.join(args.working_dir, "data", "fingpt-")
 
-        if not os.path.exists(dataset_path_or_name) and not from_remote:
+        dataset_path_or_name += dataset_name
+
+        if not from_remote and not os.path.exists(dataset_path_or_name):
             print(
                 f"The dataset path {dataset_path_or_name} does not exist, trying remote."
             )
@@ -276,7 +279,7 @@ def get_tokenizer(args, model_name):
     return tokenizer
 
 
-def get_dataset(args, tokenizer, return_text=True, prompt_mask=False):
+def get_dataset(args, tokenizer, return_text=False):
     """
     Load the dataset and apply tokenization
 
@@ -296,6 +299,7 @@ def get_dataset(args, tokenizer, return_text=True, prompt_mask=False):
             processing, optional.
     - tokenizer (Tokenizer): A tokenizer object used to convert text into
         tokens.
+    - return_text (bool): If True, return the dataset as text, otherwise tokenized.)
     """
     tok_cls_name = (
         tokenizer.__class__.__name__[:-4]
@@ -310,12 +314,14 @@ def get_dataset(args, tokenizer, return_text=True, prompt_mask=False):
     print(dataset_id)
     # if dataset is already tokenized, load it
     # unless we specifically want the remote version
-    cache_dataset_path = os.path.join(args.output_dir, f"data/{dataset_id}")
-    if (not args.from_remote_data) and os.path.exists(cache_dataset_path) and not return_text:
+    cache_dataset_path = os.path.join(args.working_dir, "data", dataset_id)
+    if (
+        os.path.exists(cache_dataset_path)
+        and not return_text
+        and not args.from_remote_data
+    ):
         print("Using cached dataset")
-        dataset = datasets.load_from_disk(cache_dataset_path)
-        # dataset = dataset.map(lambda x: x["prompt_lens"])
-        return dataset
+        return datasets.load_from_disk(cache_dataset_path)
     else:
         print("Loading dataset from remote")
 
@@ -327,27 +333,28 @@ def get_dataset(args, tokenizer, return_text=True, prompt_mask=False):
         dataset_list = load_dataset(args, args.test_dataset, args.from_remote_data)
     dataset_test = datasets.concatenate_datasets([d["test"] for d in dataset_list])
     dataset = datasets.DatasetDict({"train": dataset_train, "test": dataset_test})
-    # Display first sample from the training dataset
-    # print(dataset["train"][0])
-    # Filter out samples that exceed the maximum token length and remove unused columns
-    dataset = dataset.filter(
-        lambda feature: len(feature["instruction"]) + len(feature["input"]) <= args.max_length
-    )
     dataset = dataset.map(
         partial(
             tokenize, args, tokenizer, prompt_in_label=True, return_text=return_text
         ),
-        # num_proc=args.num_workers,
+        num_proc=args.num_workers,
     )
+
     print("original dataset length: ", len(dataset["train"]))
-    dataset = dataset.filter(lambda x: not x["exceed_max_length"])
+    dataset = dataset.filter(
+        lambda x: not x["exceed_max_length"], num_proc=args.num_workers
+    )
     print("filtered dataset length: ", len(dataset["train"]))
+
+    if len(dataset["train"]) == 0 and len(dataset["test"]) == 0:
+        raise ValueError("No samples found within the maximum token length.")
+
     dataset = dataset.remove_columns(
         ["instruction", "input", "output", "exceed_max_length"]
     )
 
     if not return_text:
-        dataset.save_to_disk(f"data/{dataset_id}")
+        dataset.save_to_disk(cache_dataset_path)
 
     return dataset
 
@@ -360,14 +367,14 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
     common_args = {
         "run_name": args.run_name,
         "output_dir": os.path.join(
-            args.output_dir, "finetuned_models", f"{args.run_name}_{formatted_time}"
+            args.working_dir, "finetuned_models", f"{args.run_name}_{formatted_time}"
         ),
         "num_train_epochs": args.num_epochs,
         # "dataloader_num_workers": args.num_workers,
         "remove_unused_columns": False,  # maybe remove
         # -------------------------------------------
         "report_to": "wandb",
-        "logging_dir": os.path.join(args.output_dir, "logs"),
+        "logging_dir": os.path.join(args.working_dir, "logs"),
         "logging_steps": args.log_interval,
         "save_steps": args.eval_steps,
         "eval_steps": args.eval_steps,

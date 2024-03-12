@@ -51,7 +51,7 @@ source /home/${STUDENT_ID}/miniconda3/bin/activate mlp_g066_training
 #     --distributed 1 \
 #     --eval_accumulation_steps 8 \
 #     --prompt_loss_weight 0.1 \
-#     --output_dir $TMP \
+#     --working_dir $TMP \
 accelerate launch train.py \
     --run_name "pythia_s_mt_0-1" \
     --base_model pythia-small \
@@ -61,5 +61,5 @@ accelerate launch train.py \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
     --eval_accumulation_steps 8 \
     --distributed 1 \
-    --output_dir $TMP \
+    --working_dir $TMP \
     >train.log 2>&1 &

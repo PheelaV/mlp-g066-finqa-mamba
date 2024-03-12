@@ -1,22 +1,13 @@
-# from datasets import load_dataset
 
-# from trl import SFTTrainer
-from trl import DataCollatorForCompletionOnlyLM
+import utils
+from collections import namedtuple
+import os
+import argparse
 
-# from custom_sft_trainer import SFTTrainer
 from custom_training import CustomSFTTrainer as SFTTrainer
 import custom_training
 from peft import LoraConfig
 from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments
-
-import utils
-from collections import namedtuple
-
-import wandb
-
-from datasets import load_dataset
-
-import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--model_size", type=str)
@@ -61,7 +52,7 @@ dataset_args = namedtuple(
         "test_dataset",
         "instruct_template",
         "num_workers",
-        "output_dir",
+        "working_dir",
     ],
 )
 dataset_args = dataset_args(
@@ -84,12 +75,7 @@ training_args = TrainingArguments(
     eval_steps=0.1,
     remove_unused_columns=False,  # important because we are injecting custom metadata for the loss function
 )
-# lora_config =  LoraConfig(
-#     r=8,
-#     target_modules=["x_proj", "embeddings", "in_proj", "out_proj"],
-#     task_type="CAUSAL_LM",
-#     bias="none"
-# )
+
 lora_config = LoraConfig(
     r=8,
     target_modules=target_modules,
@@ -100,45 +86,25 @@ lora_config = LoraConfig(
 complete_args = {}
 complete_args["prompt_loss_weight"] = 0.1
 
-# instruction_template = "Instruction: :"
-# response_template = "Answer: "
-# collator = DataCollatorForCompletionOnlyLM(instruction_template=instruction_template, response_template=response_template, tokenizer=tokenizer, mlm=False)
-import os
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 if tokenizer.pad_token_id is None:
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.pad_token_id = tokenizer.eos_token_id
-# trainer = SFTTrainer(
-#     model=model,
-#     tokenizer=tokenizer,
-#     args=training_args,
-#     peft_config=lora_config,
-#     train_dataset=dataset["train"],
-#     eval_dataset=dataset["test"],
-#     max_seq_length=512,
-#     dataset_text_field="input_ids",
-#     # data_collator=collator
-#     data_collator=custom_training.CustomDataCollatorSeq2Seq(tokenizer, padding=True),
-#     # tokenized_datasets=True,
-#     # prompt_loss_weight=complete_args["prompt_loss_weight"]
-# )
+
 trainer = SFTTrainer(
     model=model,
-    # tokenizer=tokenizer,
     args=training_args,
     peft_config=lora_config if args.lora else None,
     train_dataset=dataset["train"],
     eval_dataset=dataset["test"],
     max_seq_length=512,
-    # dataset_text_field="input_ids",
-    # data_collator=collator
+    # dataset_text_field="input_ids", # not nescessary as we are using a customized trainer
     data_collator=custom_training.CustomDataCollatorSeq2Seq(
         tokenizer, padding=True, prompt_loss_weight=complete_args["prompt_loss_weight"], test_feature=args.test_feature
     ),
     tokenized_datasets=True,
     prompt_loss_weight=complete_args["prompt_loss_weight"],
-    test_feature=args.test_feature
 )
 trainer.train()

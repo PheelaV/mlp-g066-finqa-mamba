@@ -35,6 +35,7 @@ def _compute_loss(self, model, inputs, return_outputs=False):
     del prompt_weighted_mask
     del shift_logits
     del labels
+    del input_ids
     del lm_loss
     
     return (loss, outputs) if return_outputs else loss

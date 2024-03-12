@@ -286,6 +286,12 @@ if __name__ == "__main__":
         help="Fetch the dataset form hugging face",
     )
     parser.add_argument(
+        "--resume_from_checkpoint",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="Resume training from a checkpoint of a previously saved model in the working_dir/finetuned_models",
+    )
+    parser.add_argument(
         "--from_remote_model",
         default=True,
         action=argparse.BooleanOptionalAction,
@@ -340,7 +346,7 @@ if __name__ == "__main__":
     # Now parse the rest of the arguments with the updated defaults
     # args = parser.parse_args(remaining_argv)
     args = parser.parse_args("") if is_interactive() else parser.parse_args()
-    
+
     if args.num_workers == "all":
         args.num_workers = os.cpu_count()
     elif args.num_workers.isdigit():

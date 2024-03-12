@@ -389,6 +389,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "bf16": args.bf16 & torch.cuda.is_available(),
         "optim": args.optim,
         "gradient_accumulation_steps": args.gradient_steps,
+        "resume_from_checkpoint": args.resume_from_checkpoint
         # "label_names":[]
     }
 
@@ -447,7 +448,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         # update args for logging
         common_args.update(**peft_config.__dict__)
     else:
-        trainer = custom_training.CustomTrainer(
+        trainer = custom_training.CustomSFTTrainer(
             model=model,
             args=training_args,
             train_dataset=dataset["train"],
@@ -456,6 +457,8 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
                 tokenizer, padding=True
             ),
             prompt_loss_weight=args.prompt_loss_weight,
+            max_seq_length=args.max_length,  # just to keep the warning silent as we are handling this ourselves
+            tokenized_datasets=True
         )
 
         # trainer = SFTTrainer(

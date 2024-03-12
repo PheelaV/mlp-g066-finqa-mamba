@@ -395,6 +395,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "fp16": args.fp16 & torch.cuda.is_available(),
         "bf16": args.bf16 & torch.cuda.is_available(),
         "optim": args.optim,
+        "gradient_accumulation_steps": args.gradient_steps,
         "resume_from_checkpoint": args.resume_from_checkpoint
         # "label_names":[]
     }
@@ -407,12 +408,6 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
             "ddp_find_unused_parameters": False,
         }
         common_args.update(distributed_args)
-    else:
-        common_args.update(
-            {
-                "gradient_accumulation_steps": args.gradient_steps,
-            }
-        )
 
     training_args = TrainingArguments(**common_args)
 

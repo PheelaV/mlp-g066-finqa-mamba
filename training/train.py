@@ -163,8 +163,7 @@ def main(args):
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     tokenizer = utils.get_tokenizer(args, model_name)
 
-    if args.local_rank == 0:
-        print(f"Commencing training on device: {device}, time: {formatted_time}")
+   
     trainer, training_args, common_args = utils.get_trainer(
         args, model, tokenizer, dataset, formatted_time
     )
@@ -182,9 +181,17 @@ def main(args):
         dir=args.working_dir,
     )
 
-    # return
+    if args.local_rank == 0:
+        start_time = datetime.datetime.now()
+        print(f"Start Time: {start_time.isoformat()}")
+        wandb.log(start_time=start_time)
+        
     trainer.train()
-
+    
+    if args.local_rank == 0:
+        end_time = datetime.datetime.now()
+        wandb.log(end_time=end_time)
+        print(f"End Time: {end_time.isoformat()}")
     # Save the fine-tuned model
     model.save_pretrained(training_args.working_dir)
 

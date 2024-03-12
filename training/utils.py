@@ -65,7 +65,7 @@ def parse_model_name(args):
     if args.from_remote_model:
         print("Didn't fina remote model, Trying to get a local model.")
 
-    model_path = os.path.join(args.work_dir, "finetuned_models", args.base_model)
+    model_path = os.path.join(args.working_dir, "finetuned_models", args.base_model)
     if os.path.exists(model_path):
         return model_path
     else:

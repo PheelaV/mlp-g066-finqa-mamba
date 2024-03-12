@@ -101,7 +101,7 @@ def load_config(json_filepath):
 def main(args):
     
     if args.distributed:
-        accelerator = Accelerator()
+        accelerator = Accelerator(log_with="wandb")
         args.local_rank = accelerator.device.index
         args.num_processes = accelerator.num_processes
         
@@ -181,13 +181,22 @@ def main(args):
 
     import wandb
 
-    wandb.init(
-        project="mlp-g066-mamba",
-        name=args.run_name,
-        config=common_args,
-        dir=args.working_dir,
-        group=args.run_name
-    )
+    if args.distributed and args.local_rank == 0:
+        accelerator.init_trackers(
+            project="mlp-g066-mamba",
+            name=args.run_name,
+            config=common_args,
+            dir=args.working_dir,
+            group=args.run_name
+        ) 
+    elif not args.distributed:
+        wandb.init(
+            project="mlp-g066-mamba",
+            name=args.run_name,
+            config=common_args,
+            dir=args.working_dir,
+            group=args.run_name
+        )
 
     if args.local_rank == 0:
         start_time = datetime.now()

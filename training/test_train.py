@@ -53,10 +53,11 @@ dataset_args = namedtuple(
         "instruct_template",
         "num_workers",
         "working_dir",
+        "local_rank",
     ],
 )
 dataset_args = dataset_args(
-    "sentiment-train,headline,finred*3,ner*15", 512, False, None, "default", None, "./"
+    "sentiment-train,headline,finred*3,ner*15", 512, False, None, "default", None, "./", 0
 )
 # dataset_args = dataset_args("convfinqa", 512, False, None, "default", None)
 

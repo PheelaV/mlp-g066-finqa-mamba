@@ -63,7 +63,8 @@ def parse_model_name(args):
     if args.base_model in model_paths and not args.model_from_local:
         return model_paths[args.base_model]
     if not args.model_from_local:
-        print("Didn't fina remote model, Trying to get a local model.")
+        if args.local_rank == 0:
+            print("Didn't fina remote model, Trying to get a local model.")
 
     model_path = os.path.join(args.working_dir, "finetuned_models", args.base_model)
     if os.path.exists(model_path):
@@ -230,14 +231,15 @@ def load_dataset(args, names, from_remote=False):
             dataset_path_or_name = os.path.join(args.working_dir, "data", "fingpt-")
 
         dataset_path_or_name += dataset_name
-
         if not from_remote and not os.path.exists(dataset_path_or_name):
-            print(
-                f"The dataset path {dataset_path_or_name} does not exist, trying remote."
-            )
+            if args.local_rank == 0:
+                print(
+                    f"The dataset path {dataset_path_or_name} does not exist, trying remote."
+                )
             dataset_path_or_name = f"FinGPT/fingpt-{dataset_name}"
             from_remote = True
-        print(f"Loading dataset: {dataset_path_or_name}")
+        if args.local_rank == 0:
+            print(f"Loading dataset: {dataset_path_or_name}")
 
         # Load the dataset
         try:
@@ -311,7 +313,8 @@ def get_dataset(args, tokenizer, return_text=False):
     dataset_name = args.dataset.replace(",", "_").replace("*", "")
 
     dataset_id = f"{dataset_name}_{args.max_length}_{tok_cls_name}"
-    print(dataset_id)
+    if args.local_rank == 0:
+        print(dataset_id)
     # if dataset is already tokenized, load it
     # unless we specifically want the remote version
     cache_dataset_path = os.path.join(args.working_dir, "data", dataset_id)
@@ -320,10 +323,12 @@ def get_dataset(args, tokenizer, return_text=False):
         and not return_text
         and not args.from_remote_data
     ):
-        print("Using cached dataset")
+        if args.local_rank == 0:
+            print("Using cached dataset")
         return datasets.load_from_disk(cache_dataset_path)
     else:
-        print("Loading dataset from remote")
+        if args.local_rank == 0:
+            print("Loading dataset from remote")
 
     dataset_list = load_dataset(args, args.dataset, args.from_remote_data)
     dataset_train = datasets.concatenate_datasets(
@@ -340,11 +345,13 @@ def get_dataset(args, tokenizer, return_text=False):
         num_proc=args.num_workers,
     )
 
-    print("original dataset length: ", len(dataset["train"]))
+    if args.local_rank == 0:
+        print("original dataset length: ", len(dataset["train"]))
     dataset = dataset.filter(
         lambda x: not x["exceed_max_length"], num_proc=args.num_workers
     )
-    print("filtered dataset length: ", len(dataset["train"]))
+    if args.local_rank == 0:
+        print("filtered dataset length: ", len(dataset["train"]))
 
     if len(dataset["train"]) == 0 and len(dataset["test"]) == 0:
         raise ValueError("No samples found within the maximum token length.")
@@ -388,7 +395,6 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "fp16": args.fp16 & torch.cuda.is_available(),
         "bf16": args.bf16 & torch.cuda.is_available(),
         "optim": args.optim,
-        "gradient_accumulation_steps": args.gradient_steps,
         "resume_from_checkpoint": args.resume_from_checkpoint
         # "label_names":[]
     }
@@ -401,6 +407,12 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
             "ddp_find_unused_parameters": False,
         }
         common_args.update(distributed_args)
+    else:
+        common_args.update(
+            {
+                "gradient_accumulation_steps": args.gradient_steps,
+            }
+        )
 
     training_args = TrainingArguments(**common_args)
 

@@ -35,6 +35,7 @@ import utils
 import custom_training
 
 from transformers import AutoModelForCausalLM
+from accelerate import Accelerator
 
 
 def is_interactive():
@@ -98,13 +99,19 @@ def load_config(json_filepath):
 
 
 def main(args):
-    device = (
-        torch.device("cuda")
-        if torch.cuda.is_available()
-        else torch.device("mps")
-        if torch.backends.mps.is_available()
-        else torch.device("cpu")
-    )
+    
+    if args.distributed:
+        accelerator = Accelerator()
+        args.local_rank = accelerator.device.index
+        args.num_processes = accelerator.num_processes
+        
+    # device = (
+    #     torch.device("cuda")
+    #     if torch.cuda.is_available()
+    #     else torch.device("mps")
+    #     if torch.backends.mps.is_available()
+    #     else torch.device("cpu")
+    # )
     data_dir_path = os.path.join(args.working_dir, "data")
     model_dir_path = os.path.join(args.working_dir, "finetuned_models")
     if not os.path.exists(data_dir_path):
@@ -179,6 +186,7 @@ def main(args):
         name=args.run_name,
         config=common_args,
         dir=args.working_dir,
+        group=args.run_name
     )
 
     if args.local_rank == 0:
@@ -211,7 +219,10 @@ if __name__ == "__main__":
         help="Optional path to JSON configuration file",
     )
     parser.add_argument(
-        "--local_rank", default=0, type=int, help="Local rank for distributed training"
+        "--local_rank", default=0, type=int, help="Local rank for distributed training, set internally"
+    )
+    parser.add_argument(
+        "--num_processes", default=1, type=int, help="Number of processes for distributed training, set internally"
     )
     parser.add_argument(
         "--lora_r", default=0, type=int, help="Lora rank, 0 for no lora"

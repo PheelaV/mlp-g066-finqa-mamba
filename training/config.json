@@ -19,7 +19,7 @@
     "load_best_model": false,
     "eval_steps": 0.1,
     "from_remote_data": false,
-    "from_remote_model": true,
+    "model_from_local": false,
     "prompt_loss_weight": false,
     "distributed": false,
     "fp16": false,

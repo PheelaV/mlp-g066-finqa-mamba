@@ -60,9 +60,9 @@ def parse_model_name(args):
         "pythia-big": "EleutherAI/pythia-2.8b-deduped",
     }
 
-    if args.base_model in model_paths and args.from_remote_model:
+    if args.base_model in model_paths and not args.model_from_local:
         return model_paths[args.base_model]
-    if args.from_remote_model:
+    if not args.model_from_local:
         print("Didn't fina remote model, Trying to get a local model.")
 
     model_path = os.path.join(args.working_dir, "finetuned_models", args.base_model)

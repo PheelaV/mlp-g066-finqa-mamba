@@ -292,10 +292,10 @@ if __name__ == "__main__":
         help="Resume training from a checkpoint of a previously saved model in the working_dir/finetuned_models",
     )
     parser.add_argument(
-        "--from_remote_model",
+        "--moel_from_local",
         default=True,
         action=argparse.BooleanOptionalAction,
-        help="Fetch the model form hugging face",
+        help="Get a local model from the working_dir/finetuned_models",
     )
     parser.add_argument(
         "--prompt_loss_weight", default=1.0, type=float, help="Prompt loss weight"

@@ -18,12 +18,14 @@
     "evaluation_strategy": "steps",
     "load_best_model": false,
     "eval_steps": 0.1,
-    "from_remote_data": 0,
-    "from_remote_model": 1,
-    "prompt_loss_weight": 0,
+    "from_remote_data": false,
+    "from_remote_model": true,
+    "prompt_loss_weight": 0.0,
     "distributed": false,
     "fp16": false,
     "optim": "adamw_torch",
+    "working_dir": "./",
+    "seed_data": false,
     "_comment": {
         "info": "this will be disregarded by the parser",
         "ds_config": "./config_new.json"

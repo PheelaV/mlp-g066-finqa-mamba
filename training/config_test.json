@@ -20,11 +20,11 @@
     "eval_steps": 10,
     "from_remote_data": false,
     "from_remote_model": true,
-    "prompt_loss_weight": 1,
+    "prompt_loss_weight": 1.0,
     "distributed": false,
     "fp16": false,
     "optim": "adamw_torch",
-    "working_dir": "./test_dir/h/a",
+    "working_dir": "./",
     "seed_data": false,
     "_comment": {
         "info": "this will be disregarded by the parser",

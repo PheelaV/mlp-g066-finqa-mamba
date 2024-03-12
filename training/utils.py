@@ -3,7 +3,6 @@ import os
 import datasets
 import custom_training
 from transformers import AutoTokenizer, TrainingArguments
-import datasets
 from functools import partial
 import torch
 import json
@@ -197,17 +196,32 @@ def tokenize(args, tokenizer, feature, prompt_in_label=False, return_text=False)
     }
 
 
-def load_dataset(args, names, from_remote=False):
+def load_dataset(args, names, from_remote=False, dataset_identifier_map=None):
     """
     Load one or multiple datasets based on the provided names and source location.
 
     Args:
     names (str): A comma-separated list of dataset names. Each name can be followed by '*n' to indicate replication.
     from_remote (bool): If True, load the dataset from Hugging Face's model hub. Otherwise, load it from a local disk.
-
+    dataset_identifier_map (dict): A mapping from user-friendly dataset names to their actual identifiers. Used when `from_remote` is True.
+    
     Returns:
     List[Dataset]: A list of loaded datasets. Each dataset is possibly replicated based on the input names.
     """
+
+    if dataset_identifier_map is None:
+        # A default dictionary to store various datasets identifiers (can be overrident)
+        dataset_identifier_map = {
+            "fiqa_qa": "FinGPT/fingpt-fiqa_qa",
+            "convfinqa": "FinGPT/fingpt-convfinqa",
+            "finsquad": "rajpurkar/squad_v2",
+            "mathqa" : "microsoft/orca-math-word-problems-200k"
+            # we can add more
+        }
+
+    # relevant topics for finsquad
+    relevant_topics_finsquad = ['Sony_Music_Entertainment'.lower(), 'Universal_Studios', 'Royal_Dutch_Shell'.lower(), 'European_Central_Bank'.lower(), 'Financial_crisis_of_2007%E2%80%9308'.lower()]
+
     # Split the dataset names by commas for handling multiple datasets
     dataset_names = names.split(",")
     dataset_list = []
@@ -223,20 +237,25 @@ def load_dataset(args, names, from_remote=False):
             replication_factor = int(replication_factor)
             if replication_factor < 1:
                 raise ValueError("Replication factor must be a positive integer.")
-
+        
+        # Determin that identifier is correct
         if from_remote:
-            dataset_path_or_name = "FinGPT/fingpt-"
+            try:
+                dataset_path_or_name = dataset_identifier_map[dataset_name]
+            except KeyError:
+                raise ValueError(f"Unknown dataset name: {dataset_name}. Please check the dataset identifier map.")
         else:
-            dataset_path_or_name = os.path.join(args.working_dir, "data", "fingpt-")
-
-        dataset_path_or_name += dataset_name
+            dataset_path_or_name = os.path.join(args.working_dir, "data", dataset_name)
 
         if not from_remote and not os.path.exists(dataset_path_or_name):
             print(
                 f"The dataset path {dataset_path_or_name} does not exist, trying remote."
             )
-            dataset_path_or_name = f"FinGPT/fingpt-{dataset_name}"
-            from_remote = True
+            try:
+                dataset_path_or_name = dataset_identifier_map[dataset_name]
+                from_remote = True
+            except KeyError:
+                raise ValueError(f"Unknown dataset name: {dataset_name}. Please check the dataset identifier map or provide a correct name.")
         print(f"Loading dataset: {dataset_path_or_name}")
 
         # Load the dataset
@@ -249,6 +268,10 @@ def load_dataset(args, names, from_remote=False):
         except Exception as e:
             raise RuntimeError(f"Failed to load the dataset: {str(e)}")
 
+        #filter finsquad to have only relevant topics
+        if dataset_name == 'finsquad':
+            tmp_dataset = tmp_dataset.filter(lambda example: any(topic.lower() in example['title'].lower() for topic in relevant_topics_finsquad))
+        
         # Check for 'test' split and create it from 'train' if necessary
         if "test" not in tmp_dataset:
             if "train" in tmp_dataset:

@@ -186,11 +186,11 @@ def main(args):
             project_name="mlp-g066-mamba",
             config=common_args,
             init_kwargs={
-                "name": args.run_name,
                 "dir": args.working_dir,
                 "group": args.run_name,
             }
         ) 
+        accelerator.trackers[0].run.name = args.run_name
     elif not args.distributed:
         wandb.init(
             project="mlp-g066-mamba",

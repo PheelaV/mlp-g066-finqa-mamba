@@ -292,8 +292,8 @@ if __name__ == "__main__":
         help="Resume training from a checkpoint of a previously saved model in the working_dir/finetuned_models",
     )
     parser.add_argument(
-        "--moel_from_local",
-        default=True,
+        "--model_from_local",
+        default=False,
         action=argparse.BooleanOptionalAction,
         help="Get a local model from the working_dir/finetuned_models",
     )

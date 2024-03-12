@@ -6,7 +6,6 @@ import torch
 from typing import Optional, List, Tuple, Union, Any
 from torch.nn.functional import cross_entropy
 from typing import Dict, Sequence
-import os
 from transformers import DataCollatorForSeq2Seq
 from transformers.trainer_pt_utils import nested_detach
 
@@ -29,12 +28,19 @@ def _compute_loss(self, model, inputs, return_outputs=False):
         ignore_index=self.padding_token_id,
     )
 
+    real_mass = prompt_weighted_mask.sum()
     lm_loss = lm_loss * prompt_weighted_mask.view(-1)
+    current_mass = lm_loss.size(0)
+    # this preserves correct scale of the loss
+    loss = lm_loss.mean() * real_mass / current_mass
+    
     del prompt_weighted_mask
     del shift_logits
     del labels
-
-    loss = lm_loss.mean()
+    del current_mass
+    del real_mass
+    del lm_loss
+    
     return (loss, outputs) if return_outputs else loss
 
 
@@ -205,5 +211,11 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
         # `batch["prompt_lens"] - 1` at the same time we shorten the patting by one to make the shapes
         # compatible later on.            \/
         mask = (arange_mask < (batch.pop("prompt_lens") - 1).unsqueeze(1)).float()
-        batch["prompt_weighted_mask"] = mask * self.prompt_loss_weight + (1 - mask)
+        batch["prompt_weighted_mask"] = (
+            # this is the meask i.e. 0.1, 0.1, 1, 1, 1, 1 for prompt_lens = 2 and seq_len = 
+            # 6 because of padding but answer might just be 2 
+            mask * self.prompt_loss_weight + (1 - mask)
+            # so we need to mask the mask to get
+            # 0.1, 0.1, 1, 1, 0, 0 and has the correct weight (used for mean calculation)
+        ) * (arange_mask < (batch.pop("input_lens") - 1).unsqueeze(1)).float()
         return batch

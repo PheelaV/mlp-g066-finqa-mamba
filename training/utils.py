@@ -176,6 +176,7 @@ def tokenize(args, tokenizer, feature, prompt_in_label=False, return_text=False)
             "labels": prompt,
             "exceed_max_length": exceed_max_length,
             "prompt_lens": prompt_lens,
+            "input_lens": len(input_ids) ,
         }
 
     # Add an end-of-sequence (EOS) token if it's not already present
@@ -195,6 +196,8 @@ def tokenize(args, tokenizer, feature, prompt_in_label=False, return_text=False)
         "labels": label_ids,
         "exceed_max_length": exceed_max_length,
         "prompt_lens": prompt_lens,
+        "input_lens": len(input_ids)
+
     }
 
 

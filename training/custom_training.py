@@ -151,14 +151,14 @@ class CustomTrainer(Trainer):
     #     return _prediction_step(self, model, inputs, prediction_loss_only, ignore_keys)
 
     # this is for saving the full model
-    def save_model(self, working_dir, _internal_call=False):
-        if _internal_call:
-            return super().save_model(working_dir)
-        if not os.path.exists(working_dir):
-            os.makedirs(working_dir)
+    # def save_model(self, working_dir, _internal_call=False):
+    #     if _internal_call:
+    #         return super().save_model(working_dir)
+    #     if not os.path.exists(working_dir):
+    #         os.makedirs(working_dir)
 
-        torch.save(self.model.state_dict(), f"{working_dir}/pytorch_model.bin")
-        self.tokenizer.save_pretrained(working_dir)
+    #     torch.save(self.model.state_dict(), f"{working_dir}/pytorch_model.bin")
+    #     self.tokenizer.save_pretrained(working_dir)
 
 
 class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):

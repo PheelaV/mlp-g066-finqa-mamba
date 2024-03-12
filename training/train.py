@@ -193,7 +193,7 @@ def main(args):
         wandb.log({"end_time":end_time})
         print(f"End Time: {end_time.isoformat()}")
     # Save the fine-tuned model
-    model.save_pretrained(args.working_dir)
+    trainer.save_model(os.path.join(args.work_dir, "finetuned_models", args.base_model))
 
 
 # In[4]:

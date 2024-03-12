@@ -28,17 +28,13 @@ def _compute_loss(self, model, inputs, return_outputs=False):
         ignore_index=self.padding_token_id,
     )
 
-    real_mass = prompt_weighted_mask.sum()
     lm_loss = lm_loss * prompt_weighted_mask.view(-1)
-    current_mass = lm_loss.size(0)
     # this preserves correct scale of the loss
-    loss = lm_loss.mean() * real_mass / current_mass
+    loss = lm_loss.mean() * prompt_weighted_mask.sum() / lm_loss.size(0)
     
     del prompt_weighted_mask
     del shift_logits
     del labels
-    del current_mass
-    del real_mass
     del lm_loss
     
     return (loss, outputs) if return_outputs else loss

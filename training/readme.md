@@ -4,8 +4,7 @@
 
 on a 2x RTX 3090 with deepspeed
 ```
-accelerate launch train.py --run_name test_wood_2  --config config_test.json --lora_r 0 --base_model pythia-big --bf16 1 --gradient
-_steps 4 --distributed 1 --batch_size 1
+accelerate launch train.py --run_name test_wood_2  --config config_test.json --lora_r 0 --base_model pythia-big --bf16 1 --gradient_steps 4 --distributed 1 --batch_size 1
 ```
 
 
@@ -115,4 +114,11 @@ accelerate launch train.py --run_name dataset_warmup \
 <!-- sbatch emnist_single_gpu_tutorial.sh -->
 <!-- smap -->
 <!-- squeue -->
-<!-- sinfo -->  
+<!-- sinfo -->
+
+
+## example of local model
+
+```shell
+CUDA_VISIBLE_DEVICES=0 python train.py --run_name test_saving_model  --config config_test.json --batch_size 64 --base_model "finetuned_models/test_saving_model_2024_03_12_1415/checkpoint-24" --model_from_local
+```

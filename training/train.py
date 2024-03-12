@@ -182,14 +182,14 @@ def main(args):
     )
 
     if args.local_rank == 0:
-        start_time = datetime.datetime.now()
+        start_time = datetime.now()
         print(f"Start Time: {start_time.isoformat()}")
         wandb.log(start_time=start_time)
         
     trainer.train()
     
     if args.local_rank == 0:
-        end_time = datetime.datetime.now()
+        end_time = datetime.now()
         wandb.log(end_time=end_time)
         print(f"End Time: {end_time.isoformat()}")
     # Save the fine-tuned model

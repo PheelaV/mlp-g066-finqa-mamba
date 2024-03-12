@@ -308,8 +308,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--seed_data",
+        action=argparse.BooleanOptionalAction,
         default=False,
-        type=bool,
         help="Dry run for seeding the data - say your compute node is slow or does"
         " not have access to internet and you need to seed the data locally.",
     )
@@ -328,6 +328,7 @@ if __name__ == "__main__":
     #     parser.parse_known_args("") if is_interactive() else parser.parse_known_args()
     # )
     config_args = parser.parse_args("") if is_interactive() else parser.parse_args()
+    print(config_args.seed_data)
     json_config_path = (
         config_args.config
     )  # Use the --config command line argument to specify JSON config file
@@ -335,7 +336,7 @@ if __name__ == "__main__":
     if "_comment" in config_defaults:
         config_defaults.pop("_comment")
     # Update parser defaults based on JSON configuration
-    parser.set_defaults(**config_defaults)
+    # parser.set_defaults(**config_defaults)
     # Now parse the rest of the arguments with the updated defaults
     # args = parser.parse_args(remaining_argv)
     args = parser.parse_args("") if is_interactive() else parser.parse_args()
@@ -346,5 +347,7 @@ if __name__ == "__main__":
         args.num_workers = int(args.num_workers)
     else:
         raise ValueError("num_workers must be 'all' or an integer")
+    print(args.seed_data)
+    exit()
     main(args)
 

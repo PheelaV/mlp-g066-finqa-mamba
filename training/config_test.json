@@ -25,7 +25,7 @@
     "fp16": false,
     "optim": "adamw_torch",
     "working_dir": "./test_dir/h/a",
-    "seed_data": true,
+    "seed_data": false,
     "_comment": {
         "info": "this will be disregarded by the parser",
         "ds_config": "./config_new.json"

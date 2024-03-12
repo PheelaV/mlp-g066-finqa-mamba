@@ -17,7 +17,7 @@ https://vitalflux.com/distributed-llm-training-explained-with-examples/
 
 from FinGpT "Multi-task Instruction Tuning"
 <!-- CUDA_VISIBLE_DEVICES=0 -->
-```
+```sh
 CUDA_VISIBLE_DEVICES=0 python train.py \
     --run_name "pythia_s_mt_0" \
     --base_model pythia-small \
@@ -26,7 +26,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
     --config config_mt.json \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
     --eval_accumulation_steps 8 \
->train.log 2>&1 &;
+>train.log 2>&1
 
 CUDA_VISIBLE_DEVICES=0 python train.py \
     --run_name "pythia_s_mt_1" \
@@ -36,7 +36,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
     --config config_mt.json \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
     --eval_accumulation_steps 8 \
->train.log 2>&1 &;
+>train.log 2>&1
 
 CUDA_VISIBLE_DEVICES=0 python train.py \
     --run_name "pythia_s_mt_2" \
@@ -46,7 +46,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
     --config config_mt.json \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
     --eval_accumulation_steps 8 \
->train.log 2>&1 &;
+>train.log 2>&1
 
 
 CUDA_VISIBLE_DEVICES=1 python train.py \
@@ -57,7 +57,7 @@ CUDA_VISIBLE_DEVICES=1 python train.py \
     --config config_mt.json \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
     --eval_accumulation_steps 8 \
->train.log 2>&1 &
+>train.log 2>&1 &;
 
 CUDA_VISIBLE_DEVICES=1 python train.py \
     --run_name "mamba_s_mt_1" \
@@ -67,7 +67,7 @@ CUDA_VISIBLE_DEVICES=1 python train.py \
     --config config_mt.json \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
     --eval_accumulation_steps 8 \
->train.log 2>&1 &
+>train.log 2>&1 &;
 
 CUDA_VISIBLE_DEVICES=1 python train.py \
     --run_name "mamba_s_mt_2" \
@@ -77,7 +77,7 @@ CUDA_VISIBLE_DEVICES=1 python train.py \
     --config config_mt.json \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
     --eval_accumulation_steps 8 \
->train.log 2>&1 &
+>train.log 2>&1 &;
 ```
 
 # trash

@@ -486,7 +486,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
     if args.fp16 or args.bf16 and torch.cuda.is_available():
         common_args.update(
             {
-                "fp16_backend": "apex",  # AUTO
+                # "fp16_backend": "apex",  # AUTO
                 "fp16_full_eval": True,
                 "fp16_opt_level": "O1",
                 "fp16": args.fp16 & torch.cuda.is_available(),

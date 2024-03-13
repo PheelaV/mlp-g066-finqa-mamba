@@ -35,7 +35,7 @@ conda install -y pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconve
 # https://huggingface.co/state-spaces/mamba-2.8b-hf 
 pip install git+https://github.com/huggingface/transformers@main
 
-pip install -U datasets trl wandb peft
+pip install -U datasets trl wandb peft accelerate
 pip install causal-conv1d>=1.2.0
 pip install mamba-ssm
 

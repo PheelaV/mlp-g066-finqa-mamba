@@ -3,7 +3,6 @@ import os
 import datasets
 import custom_training
 from transformers import AutoTokenizer, TrainingArguments
-import datasets
 from functools import partial
 import torch
 import json
@@ -42,7 +41,7 @@ FINSQUAD_TOPICS = set(
 )
 
 DATASETS_MAP = {
-    "squad_v2": "rajpurkar/squad_v2",
+    "squad": "rajpurkar/squad",
     "mathqa": "microsoft/orca-math-word-problems-200k",
     "fiqa_qa": "FinGPT/fingpt-fiqa_qa",
     "sentiment-train": "FinGPT/fingpt-sentiment-train",
@@ -300,18 +299,28 @@ def load_dataset(args, names, from_remote=False, dataset_identifier_map=None):
         except Exception as e:
             raise RuntimeError(f"Failed to load the dataset: {str(e)}")
 
-        # filter finsquad to have only relevant topics
-        if dataset_name == "squad_v2":
+        # filter finsquad to have only relevant topics and adjust to match existing prompt template
+        if dataset_name == "squad":
+            squad_instruction = "Given the information in the input, please provide a logical answer to the question at the end of the input by taking clues and relevant information from there."
             tmp_dataset = tmp_dataset.filter(
                 lambda example: example["title"].lower() in FINSQUAD_TOPICS,
                 num_proc=args.num_workers,
             ).map(
                 lambda example: {
-                    "input": example["context"],
-                    "instruction": example["question"],
+                    "input": example['context'] + " " + example['question'],
+                    "instruction": squad_instruction,
                     "output": "".join(example["answers"]['text'])
                 }, num_proc=args.num_workers
             ).remove_columns(["id", "title", "context", "answers", "question"])
+        
+        # Adjusting the mathqa dataset match FinGPT attributes
+        if dataset_name == 'mathqa':
+            mathqa_instruction = "Given the information provided in the input, please provide a logical mathematical answer to the question in the input by using relevant information from there."
+            # Rename 'question' to 'input', 'answer' to 'output'
+            tmp_dataset = tmp_dataset.map(
+                lambda example: {
+                    'input': example['question'], 'instruction': mathqa_instruction, 'output': example['answer']
+                }, remove_columns=['question', 'answer'])
 
         # Check for 'test' split and create it from 'train' if necessary
         if "test" not in tmp_dataset:

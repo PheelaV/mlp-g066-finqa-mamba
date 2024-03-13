@@ -183,7 +183,7 @@ def main(args):
 
     if args.distributed and args.local_rank == 0:
         accelerator.init_trackers(
-            project_name="mlp-g066-mamba",
+            project_name="mlp-g066",
             config=common_args,
             init_kwargs={
                 "dir": args.working_dir,
@@ -193,7 +193,7 @@ def main(args):
         accelerator.trackers[0].run.name = args.run_name
     elif not args.distributed:
         wandb.init(
-            project="mlp-g066-mamba",
+            project="mlp-g066",
             name=args.run_name,
             config=common_args,
             dir=args.working_dir,

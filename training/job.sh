@@ -15,7 +15,8 @@
 # then you need to seed the data as gpu nodes do not have full access to the internet
 # for example for multi-task dataset
 # model is important because of the choice of tokenizer (dataset is pre-tokenized)
-# python train.py --dataset "sentiment-train,headline,finred*3,ner*15" --working_dir /disk/scratch/<UUD> --seed_data --num_workers 16 --model mamba-small
+# python train.py --dataset "sentiment-train,headline,finred*3,ner*15" --working_dir /disk/scratch/<UUD> --seed_data --num_workers 16 --base_model mamba-small
+# python train.py --dataset "sentiment-train,headline,finred*3,ner*15" --working_dir /disk/scratch/2588483 --seed_data --num_workers 16 --base_model mamba-small --shared_dir ./
 export CUDA_HOME=/opt/cuda-12.2.1/
 
 # export CUDNN_HOME=/opt/cuDNN-7.0/
@@ -61,16 +62,22 @@ source /home/${STUDENT_ID}/miniconda3/bin/activate mlp_g066_training
 #     --eval_accumulation_steps 8 \
 #     --prompt_loss_weight 0.1 \
 #     --working_dir $TMP \
-python train.py \
-    --run_name "mamba_s_mt_0-1" \
-    --base_model mamba-small \
-    --dataset "sentiment-train,headline,finred*3,ner*15" \
-    --max_length 512 \
-    --config config_mt.json \
-    --eval_accumulation_steps 8 \
-    --prompt_loss_weight 0.1 \
-    --working_dir $TMP \
-    >train.log 2>&1 &
+
+
+python train.py --config config_test.json --shared_dir /home/$STUDENT_ID/shared >train.log 2>&1 &
+
+
+# python train.py \
+#     --run_name "mamba_s_mt_0-1" \
+#     --base_model mamba-small \
+#     --dataset "sentiment-train,headline,finred*3,ner*15" \
+#     --max_length 512 \
+#     --config config_mt.json \
+#     --eval_accumulation_steps 8 \
+#     --prompt_loss_weight 0.1 \
+#     --working_dir $TMP \
+#     --shared_dir /home/$STUDENT_ID/shared
+#     >train.log 2>&1 &
 # accelerate launch train.py \
 #     --run_name "pythia_s_mt_0-1" \
 #     --base_model pythia-small \
@@ -82,3 +89,5 @@ python train.py \
 #     --distributed 1 \
 #     --working_dir $TMP \
 #     >train.log 2>&1 &
+
+# python train.py --run_name "mamba_s_mt_0-1" --base_model mamba-small --dataset "sentiment-train,headline,finred*3,ner*15" --max_length 512 --config config_mt.json --eval_accumulation_steps 8 --prompt_loss_weight 0.1 --working_dir /disk/scratch/s2588483/

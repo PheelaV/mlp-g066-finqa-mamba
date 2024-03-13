@@ -9,10 +9,10 @@ import torch
 import json
 
 # A dictionary to store various prompt templates.
-template_dict = {"default": "Instruction: {instruction}\nInput: {input}\nAnswer: "}
+PROMPT_TEMPLATES = {"default": "Instruction: {instruction}\nInput: {input}\nAnswer: "}
 
 # A dictionary to store the LoRA module mapping for different models.
-lora_module_dict = {
+LORA_MODULES = {
     # 'chatglm2': ['query_key_value'],
     # 'falcon': ['query_key_value'],
     # 'bloom': ['query_key_value'],
@@ -25,6 +25,55 @@ lora_module_dict = {
     # 'baichuan': ['q_proj', 'k_proj', 'v_proj'],
     "pythia": ["query_key_value"],
     "mamba": ["x_proj", "embeddings", "in_proj", "out_proj"],
+}
+
+# relevant topics for finsquad
+FINSQUAD_TOPICS = set(
+    (
+        x.lower()
+        for x in (
+            "Sony_Music_Entertainment",
+            "Universal_Studios",
+            "Royal_Dutch_Shell",
+            "European_Central_Bank",
+            "Financial_crisis_of_2007%E2%80%9308",
+        )
+    )
+)
+
+DATASETS_MAP = {
+    "squad_v2": "rajpurkar/squad_v2",
+    "mathqa": "microsoft/orca-math-word-problems-200k",
+    "sentiment-train": "FinGPT/fingpt-sentiment-train",
+    "finred": "FinGPT/fingpt-finred",
+    "fiqa_qa": "FinGPT/fingpt-fiqa_qa",
+    "sentiment-cls": "FinGPT/fingpt-sentiment-cls",
+    "headline-cls": "FinGPT/fingpt-headline-cls",
+    "fineval": "FinGPT/fingpt-fineval",
+    "convfinqa": "FinGPT/fingpt-convfinqa",
+    "ner-cls": "FinGPT/fingpt-ner-cls",
+    "finred-cls": "FinGPT/fingpt-finred-cls",
+    "finred-re": "FinGPT/fingpt-finred-re",
+    # we can add more
+}
+
+MODELS_MAP = {
+    # 'chatglm2': ('THUDM/chatglm2-6b', 'base_models/chatglm2-6b'),
+    # 'llama2': ('meta-llama/Llama-2-7b-hf', 'base_models/Llama-2-7b-hf'),
+    # 'llama2-13b': ('meta-llama/Llama-2-13b-hf', 'base_models/Llama-2-13b-hf'),
+    # 'llama2-13b-nr': ('NousResearch/Llama-2-13b-hf', 'base_models/Llama-2-13b-hf'),
+    # 'falcon': ('tiiuae/falcon-7b', 'base_models/falcon-7b'),
+    # 'internlm': ('internlm/internlm-7b', 'base_models/internlm-7b'),
+    # 'qwen': ('Qwen/Qwen-7B', 'base_models/Qwen-7B'),
+    # 'baichuan': ('baichuan-inc/Baichuan2-7B-Base', 'base_models/Baichuan2-7B-Base'),
+    # 'mpt': ('cekal/mpt-7b-peft-compatible', 'base_models/mpt-7b-peft-compatible'),
+    # 'bloom': ('bigscience/bloom-7b1', 'base_models/bloom-7b1'),
+    "mamba-small": "state-spaces/mamba-130m-hf",
+    "pythia-small": "EleutherAI/pythia-70m-deduped",
+    "mamba-medium": "state-spaces/mamba-1.4b-hf",
+    "pythia-medium": "EleutherAI/pythia-1.4b-deduped",
+    "mamba-big": "state-spaces/mamba-2.8b-hf",
+    "pythia-big": "EleutherAI/pythia-2.8b-deduped",
 }
 
 
@@ -41,27 +90,8 @@ def parse_model_name(args):
     Returns:
     - str: The appropriate path for the given model name.
     """
-    model_paths = {
-        # 'chatglm2': ('THUDM/chatglm2-6b', 'base_models/chatglm2-6b'),
-        # 'llama2': ('meta-llama/Llama-2-7b-hf', 'base_models/Llama-2-7b-hf'),
-        # 'llama2-13b': ('meta-llama/Llama-2-13b-hf', 'base_models/Llama-2-13b-hf'),
-        # 'llama2-13b-nr': ('NousResearch/Llama-2-13b-hf', 'base_models/Llama-2-13b-hf'),
-        # 'falcon': ('tiiuae/falcon-7b', 'base_models/falcon-7b'),
-        # 'internlm': ('internlm/internlm-7b', 'base_models/internlm-7b'),
-        # 'qwen': ('Qwen/Qwen-7B', 'base_models/Qwen-7B'),
-        # 'baichuan': ('baichuan-inc/Baichuan2-7B-Base', 'base_models/Baichuan2-7B-Base'),
-        # 'mpt': ('cekal/mpt-7b-peft-compatible', 'base_models/mpt-7b-peft-compatible'),
-        # 'bloom': ('bigscience/bloom-7b1', 'base_models/bloom-7b1'),
-        "mamba-small": "state-spaces/mamba-130m-hf",
-        "pythia-small": "EleutherAI/pythia-70m-deduped",
-        "mamba-medium": "state-spaces/mamba-1.4b-hf",
-        "pythia-medium": "EleutherAI/pythia-1.4b-deduped",
-        "mamba-big": "state-spaces/mamba-2.8b-hf",
-        "pythia-big": "EleutherAI/pythia-2.8b-deduped",
-    }
-
-    if args.base_model in model_paths and not args.model_from_local:
-        return model_paths[args.base_model]
+    if args.base_model in MODELS_MAP and not args.model_from_local:
+        return MODELS_MAP[args.base_model]
     if not args.model_from_local:
         if args.local_rank == 0:
             print("Didn't fina remote model, Trying to get a local model.")
@@ -71,7 +101,7 @@ def parse_model_name(args):
         return model_path
     else:
         raise ValueError(
-            f"Undefined base model '{args.base_model}'. Valid model names are: {json.dumps(model_paths, indent=2)}"
+            f"Undefined base model '{args.base_model}'. Valid model names are: {json.dumps(MODELS_MAP, indent=2)}"
         )
 
 
@@ -93,12 +123,12 @@ def get_prompt(template, instruction, input_text):
     if not instruction:
         return input_text
 
-    if template not in template_dict:
+    if template not in PROMPT_TEMPLATES:
         raise KeyError(
-            f"Template '{template}' not found. Available templates: {', '.join(template_dict.keys())}"
+            f"Template '{template}' not found. Available templates: {', '.join(PROMPT_TEMPLATES.keys())}"
         )
 
-    return template_dict[template].format(instruction=instruction, input=input_text)
+    return PROMPT_TEMPLATES[template].format(instruction=instruction, input=input_text)
 
 
 def test_mapping(args, feature):
@@ -176,7 +206,7 @@ def tokenize(args, tokenizer, feature, prompt_in_label=False, return_text=False)
             "labels": prompt,
             "exceed_max_length": exceed_max_length,
             "prompt_lens": prompt_lens,
-            "input_lens": len(input_ids) ,
+            "input_lens": len(input_ids),
         }
 
     # Add an end-of-sequence (EOS) token if it's not already present
@@ -196,22 +226,24 @@ def tokenize(args, tokenizer, feature, prompt_in_label=False, return_text=False)
         "labels": label_ids,
         "exceed_max_length": exceed_max_length,
         "prompt_lens": prompt_lens,
-        "input_lens": len(input_ids)
-
+        "input_lens": len(input_ids),
     }
 
 
-def load_dataset(args, names, from_remote=False):
+def load_dataset(args, names, from_remote=False, dataset_identifier_map=None):
     """
     Load one or multiple datasets based on the provided names and source location.
 
     Args:
-    names (str): A comma-separated list of dataset names. Each name can be followed by '*n' to indicate replication.
-    from_remote (bool): If True, load the dataset from Hugging Face's model hub. Otherwise, load it from a local disk.
-
+        names (str): A comma-separated list of dataset names. Each name can be followed by '*n' to indicate replication.
+        from_remote (bool): If True, load the dataset from Hugging Face's model hub. Otherwise, load it from a local disk.
+            dataset_identifier_map (dict): A mapping from user-friendly dataset names to their actual identifiers. Used when `from_remote` is True.
     Returns:
-    List[Dataset]: A list of loaded datasets. Each dataset is possibly replicated based on the input names.
+        List[Dataset]: A list of loaded datasets. Each dataset is possibly replicated based on the input names.
     """
+    if dataset_identifier_map is not None:
+        DATASETS_MAP.update(dataset_identifier_map)
+
     # Split the dataset names by commas for handling multiple datasets
     dataset_names = names.split(",")
     dataset_list = []
@@ -229,18 +261,30 @@ def load_dataset(args, names, from_remote=False):
                 raise ValueError("Replication factor must be a positive integer.")
 
         if from_remote:
-            dataset_path_or_name = "FinGPT/fingpt-"
+            try:
+                dataset_path_or_name = DATASETS_MAP[dataset_name]
+            except KeyError:
+                raise ValueError(
+                    f"Unknown dataset name: {dataset_name}. Please check the dataset identifier map."
+                )
         else:
-            dataset_path_or_name = os.path.join(args.working_dir, "data", "fingpt-")
+            dataset_path_or_name = os.path.join(args.working_dir, "data", dataset_name)
 
-        dataset_path_or_name += dataset_name
+        # dataset_path_or_name += dataset_name
+
         if not from_remote and not os.path.exists(dataset_path_or_name):
             if args.local_rank == 0:
                 print(
                     f"The dataset path {dataset_path_or_name} does not exist, trying remote."
                 )
-            dataset_path_or_name = f"FinGPT/fingpt-{dataset_name}"
-            from_remote = True
+            try:
+                dataset_path_or_name = DATASETS_MAP[dataset_name]
+                from_remote = True
+            except KeyError:
+                raise ValueError(
+                    f"Unknown dataset name: {dataset_name}. Please check the dataset identifier map or provide a correct name."
+                )
+
         if args.local_rank == 0:
             print(f"Loading dataset: {dataset_path_or_name}")
 
@@ -253,6 +297,19 @@ def load_dataset(args, names, from_remote=False):
             )
         except Exception as e:
             raise RuntimeError(f"Failed to load the dataset: {str(e)}")
+
+        # filter finsquad to have only relevant topics
+        if dataset_name == "squad_v2":
+            tmp_dataset = tmp_dataset.filter(
+                lambda example: example["title"].lower() in FINSQUAD_TOPICS,
+                num_proc=args.num_workers,
+            ).map(
+                lambda example: {
+                    "input": example["context"],
+                    "instruction": example["question"],
+                    "output": "".join(example["answers"]['text'])
+                }, num_proc=args.num_workers
+            ).remove_columns(["id", "title", "context", "answers", "question"])
 
         # Check for 'test' split and create it from 'train' if necessary
         if "test" not in tmp_dataset:
@@ -399,7 +456,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "bf16": args.bf16 & torch.cuda.is_available(),
         "optim": args.optim,
         "gradient_accumulation_steps": args.gradient_steps,
-        "resume_from_checkpoint": args.resume_from_checkpoint
+        "resume_from_checkpoint": args.resume_from_checkpoint,
         # "label_names":[]
     }
 
@@ -424,7 +481,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         if "mamba" in args.base_model:
             peft_config = LoraConfig(
                 r=args.lora_r,
-                target_modules=lora_module_dict["mamba"],
+                target_modules=LORA_MODULES["mamba"],
                 task_type=TaskType.CAUSAL_LM,
                 lora_dropout=0.1,
                 bias="none",
@@ -437,7 +494,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
                 # lora_alpha=32,
                 lora_alpha=args.lora_r,
                 lora_dropout=0.1,
-                target_modules=lora_module_dict["pythia"],
+                target_modules=LORA_MODULES["pythia"],
                 bias="none",
             )
         trainer = custom_training.CustomSFTTrainer(
@@ -468,7 +525,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
             ),
             prompt_loss_weight=args.prompt_loss_weight,
             max_seq_length=args.max_length,  # just to keep the warning silent as we are handling this ourselves
-            tokenized_datasets=True
+            tokenized_datasets=True,
         )
 
         # trainer = SFTTrainer(

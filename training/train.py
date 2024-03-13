@@ -300,10 +300,10 @@ if __name__ == "__main__":
         type=str,
         help="Saving logs as well as saving and retrieving models, datasets, modle checkpointing",
     )
-    # some clusters need scratch disks which are not shared across nodes so that gives a rise for 
-    # the need to read data from a shared location, then save the model to that shared location, 
+    # some clusters need scratch disks which are not shared across nodes so that gives a rise for
+    # the need to read data from a shared location, then save the model to that shared location,
     # but checkpoint to a different location
-    # I am resolving this by giving the option to save the model to a different location as well as 
+    # I am resolving this by giving the option to save the model to a different location as well as
     # read the data from a different location
     parser.add_argument(
         "--shared_dir",
@@ -312,7 +312,9 @@ if __name__ == "__main__":
         help="Overwrite location from which the model or data gets saved or read from locally",
     )
     parser.add_argument("--instruct_template", default="default")
-    parser.add_argument("--load_best_model", default="False", type=bool)
+    parser.add_argument(
+        "--load_best_model", default=True, actionaction=argparse.BooleanOptionalAction
+    )
     parser.add_argument("--log_interval", default=20, type=int)
     parser.add_argument("--evaluation_strategy", default="steps", type=str)
     parser.add_argument("--eval_steps", default=0.1, type=float)

@@ -2,17 +2,27 @@
 # export TOKENIZERS_PARALLELISM=0
 
 
-
-
-#---- Relation Extraction ----
-# taken from FinGPT_Benchmark/benchmarks
+#---- Basic Testing ----
 
 python benchmarks.py \
 --dataset re \
---base_model llama2 \
+--base_model pythia \
 --peft_model ../finetuned_models/finred-llama2-linear_202310012254 \
 --batch_size 8 \
---max_length 512
+--max_length 512 \
+--from_remote True
+
+
+
+
+#---- Relation Extraction ----
+
+# python benchmarks.py \
+# --dataset re \
+# --base_model pythia \
+# --peft_model ../finetuned_models/finred-llama2-linear_202310012254 \
+# --batch_size 8 \
+# --max_length 512
 
 # python benchmarks.py \
 # --dataset re \

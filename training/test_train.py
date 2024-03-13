@@ -73,7 +73,7 @@ dataset = utils.get_dataset(args=dataset_args, tokenizer=tokenizer, return_text=
 
 del tokenizer
 training_args = TrainingArguments(
-    output_dir="./results",
+    output_dir="./test_results",
     num_train_epochs=3,
     per_device_train_batch_size=4,
     logging_dir="./logs",

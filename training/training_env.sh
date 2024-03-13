@@ -43,6 +43,8 @@ conda list
 echo "-----------------------"
 echo "DONE"
 
+# mixed precision
+# conda install conda-forge::nvidia-apex
 
 # for the distributed stuff
 # pip install deepspeed bitsandbytes

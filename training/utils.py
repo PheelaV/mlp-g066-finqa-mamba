@@ -440,7 +440,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         ),
         "num_train_epochs": args.num_epochs,
         # "dataloader_num_workers": args.num_workers,
-        "remove_unused_columns": False,  # maybe remove
+        "remove_unused_columns": False,  # for pre-tokenized datasets
         # -------------------------------------------
         "report_to": "wandb",
         "logging_dir": os.path.join(args.working_dir, "logs"),
@@ -454,22 +454,28 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "warmup_ratio": args.warmup_ratio,
         "lr_scheduler_type": args.scheduler,
         "load_best_model_at_end": args.load_best_model,
-        "fp16": args.fp16 & torch.cuda.is_available(),
-        "bf16": args.bf16 & torch.cuda.is_available(),
         "optim": args.optim,
         "gradient_accumulation_steps": args.gradient_steps,
         "resume_from_checkpoint": args.resume_from_checkpoint,
         # "label_names":[]
     }
+    
+    if args.fp16 or args.bf16 and torch.cuda.is_available():
+        common_args.update({
+            # "fp16_backend": "amp", # AUTO
+            "fp16_full_eval": True,
+            "fp16_opt_level": "O1",
+            "fp16": args.fp16 & torch.cuda.is_available(),
+            "bf16": args.bf16 & torch.cuda.is_available(),
+        })
 
     if args.distributed:
-        distributed_args = {
+        common_args.update({
             # "deepspeed": args.ds_config,
             "per_device_train_batch_size": args.batch_size,
             "per_device_eval_batch_size": args.batch_size,
             "ddp_find_unused_parameters": False,
-        }
-        common_args.update(distributed_args)
+        })
 
     training_args = TrainingArguments(**common_args)
 

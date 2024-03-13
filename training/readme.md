@@ -24,7 +24,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
     --max_length 1024 \
     --config config_mt.json \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
-    --eval_accumulation_steps 8 2>&1 | tee train1.log
+    --eval_accumulation_steps 8 2>&1 | tee train0.log
 
 CUDA_VISIBLE_DEVICES=0 python train.py \
     --run_name "pythia_s_mt_1" \
@@ -33,8 +33,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
     --max_length 1024 \
     --config config_mt.json \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
-    --eval_accumulation_steps 8 \
->train.log 2>&1
+    --eval_accumulation_steps 8 2>&1 | tee train0.log
 
 CUDA_VISIBLE_DEVICES=0 python train.py \
     --run_name "pythia_s_mt_2" \
@@ -43,8 +42,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
     --max_length 1024 \
     --config config_mt.json \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
-    --eval_accumulation_steps 8 \
->train.log 2>&1
+    --eval_accumulation_steps 8 2>&1 | tee train0.log
 
 
 CUDA_VISIBLE_DEVICES=1 python train.py \
@@ -54,8 +52,7 @@ CUDA_VISIBLE_DEVICES=1 python train.py \
     --max_length 1024 \
     --config config_mt.json \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
-    --eval_accumulation_steps 8 \
->train.log 2>&1 &;
+    --eval_accumulation_steps 8 2>&1 | tee train1.log
 
 CUDA_VISIBLE_DEVICES=1 python train.py \
     --run_name "mamba_s_mt_1" \
@@ -64,8 +61,7 @@ CUDA_VISIBLE_DEVICES=1 python train.py \
     --max_length 1024 \
     --config config_mt.json \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
-    --eval_accumulation_steps 8 \
->train.log 2>&1 &;
+    --eval_accumulation_steps 8 2>&1 | tee train1.log
 
 CUDA_VISIBLE_DEVICES=1 python train.py \
     --run_name "mamba_s_mt_2" \
@@ -74,15 +70,16 @@ CUDA_VISIBLE_DEVICES=1 python train.py \
     --max_length 1024 \
     --config config_mt.json \
     --dataset "sentiment-train,headline,finred*3,ner*15" \
-    --eval_accumulation_steps 8 \
->train.log 2>&1 &;
+    --eval_accumulation_steps 8 2>&1 | tee train1.log
 ```
 
 
 # Experiment 2
 
 I was able to make this run with context_length=2048 on 2x24GB 3090
+```
 accelerate launch train.py --run_name "pythia_m_mt_0" --base_model pythia-medium     --lora 8 --prompt_loss_weight 0 --max_length 2048 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --eval_accumulation_steps 4 --gradient_steps 4 --distributed
+```
 
 from FinGpT "Multi-task Instruction Tuning"
 <!-- CUDA_VISIBLE_DEVICES=0 -->

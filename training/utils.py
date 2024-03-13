@@ -44,15 +44,17 @@ FINSQUAD_TOPICS = set(
 DATASETS_MAP = {
     "squad_v2": "rajpurkar/squad_v2",
     "mathqa": "microsoft/orca-math-word-problems-200k",
-    "sentiment-train": "FinGPT/fingpt-sentiment-train",
-    "finred": "FinGPT/fingpt-finred",
     "fiqa_qa": "FinGPT/fingpt-fiqa_qa",
+    "sentiment-train": "FinGPT/fingpt-sentiment-train",
     "sentiment-cls": "FinGPT/fingpt-sentiment-cls",
     "headline-cls": "FinGPT/fingpt-headline-cls",
+    "headline": "FinGPT/fingpt-headline",
     "fineval": "FinGPT/fingpt-fineval",
     "convfinqa": "FinGPT/fingpt-convfinqa",
     "ner-cls": "FinGPT/fingpt-ner-cls",
+    "ner": "FinGPT/fingpt-ner",
     "finred-cls": "FinGPT/fingpt-finred-cls",
+    "finred": "FinGPT/fingpt-finred",
     "finred-re": "FinGPT/fingpt-finred-re",
     # we can add more
 }

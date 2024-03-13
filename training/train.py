@@ -230,10 +230,16 @@ if __name__ == "__main__":
         help="Optional path to JSON configuration file",
     )
     parser.add_argument(
-        "--local_rank", default=0, type=int, help="Local rank for distributed training, set internally"
+        "--local_rank",
+        default=0,
+        type=int,
+        help="Local rank for distributed training, set internally",
     )
     parser.add_argument(
-        "--num_processes", default=1, type=int, help="Number of processes for distributed training, set internally"
+        "--num_processes",
+        default=1,
+        type=int,
+        help="Number of processes for distributed training, set internally",
     )
     parser.add_argument(
         "--lora_r", default=0, type=int, help="Lora rank, 0 for no lora"
@@ -329,10 +335,16 @@ if __name__ == "__main__":
         help="Enable per device batch and gradient accumulation",
     )
     parser.add_argument(
-        "--fp16", default=False, type=bool, help="Enable fp16 precision"
+        "--fp16",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="Enable fp16 precision",
     )
     parser.add_argument(
-        "--bf16", default=False, type=bool, help="Enable bf16 precision"
+        "--bf16",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="Enable bf16 precision",
     )
     parser.add_argument(
         "--seed_data",

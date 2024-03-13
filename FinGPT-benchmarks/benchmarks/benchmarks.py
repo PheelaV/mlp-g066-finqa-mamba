@@ -61,6 +61,7 @@ def main(args):
     # model = get_peft_model(model, peft_config)
     # model.load_state_dict(torch.load(args.peft_model + '/pytorch_model.bin'))
 
+    # uncomment when using peft!
     # model = PeftModel.from_pretrained(model, args.peft_model)
     # model = get_peft_model(model, peft_config)
     model = model.eval()

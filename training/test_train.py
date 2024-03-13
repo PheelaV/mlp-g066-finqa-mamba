@@ -82,7 +82,7 @@ training_args = TrainingArguments(
     evaluation_strategy="steps",
     report_to="wandb",
     eval_steps=0.1,
-    remove_unused_columns=False,  # important because we are injecting custom metadata for the loss function
+    remove_unused_columns=args.reference,  # important because we are injecting custom metadata for the loss function
 )
 
 lora_config = LoraConfig(
@@ -93,7 +93,7 @@ lora_config = LoraConfig(
 )
 
 complete_args = {}
-complete_args["prompt_loss_weight"] = 0.1
+complete_args["prompt_loss_weight"] = 0
 
 
 os.environ["TOKENIZERS_PARALLELISM"] = "true"

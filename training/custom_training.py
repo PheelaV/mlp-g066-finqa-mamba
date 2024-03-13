@@ -27,11 +27,15 @@ def _compute_loss(self, model, inputs, return_outputs=False):
         reduction="none",
         ignore_index=self.padding_token_id,
     )
-
+    # print("*" * 80)
+    # print(lm_loss.mean())
+    # print(lm_loss)
     lm_loss = lm_loss * prompt_weighted_mask.view(-1)
+    # print(lm_loss)
+    # print(lm_loss.mean(), prompt_weighted_mask.sum(), lm_loss.size(0))
     # this preserves correct scale of the loss
-    loss = lm_loss.mean() * prompt_weighted_mask.sum() / lm_loss.size(0)
-    
+    loss = lm_loss.mean() * lm_loss.size(0) / prompt_weighted_mask.sum()
+    # print(loss)
     del prompt_weighted_mask
     del shift_logits
     del labels

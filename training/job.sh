@@ -21,7 +21,9 @@ export CUDA_HOME=/opt/cuda-12.2.1/
 
 # export CUDNN_HOME=/opt/cuDNN-7.0/
 
-export STUDENT_ID=$(whoami)
+export STUDENT_ID=2588483
+# does not owrk for some reason
+# export STUDENT_ID=$(whoami)
 
 # export LD_LIBRARY_PATH=${CUDNN_HOME}/lib64:${CUDA_HOME}/lib64:$LD_LIBRARY_PATH
 

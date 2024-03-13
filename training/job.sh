@@ -49,7 +49,7 @@ export HF_DATASETS_CACHE=$DATASET_DIR
 
 # df--gres=gpu:a6000:2
 
-source /home/${STUDENT_ID}/miniconda3/bin/activate mlp_g066_training
+source /home/$STUDENT_ID/miniconda3/bin/activate mlp_g066_training
 
 # cd ~/repos/mlp-g066-finqa-mamba/training
 # accelerate launch train.py \

@@ -12,7 +12,7 @@ from transformers.trainer_pt_utils import nested_detach
 
 def _compute_loss(self, model, inputs, return_outputs=False):
     input_ids = inputs.pop("input_ids")
-    prompt_weighted_mask = inputs.pop("prompt_weighted_mask")
+    pwm = inputs.pop("prompt_weighted_mask")
     outputs = model(input_ids)
 
     lm_logits = outputs.logits
@@ -27,21 +27,15 @@ def _compute_loss(self, model, inputs, return_outputs=False):
         reduction="none",
         ignore_index=self.padding_token_id,
     )
-    # print("*" * 80)
-    # print(lm_loss.mean())
-    # print(lm_loss)
-    lm_loss = lm_loss * prompt_weighted_mask.view(-1)
-    # print(lm_loss)
-    # print(lm_loss.mean(), prompt_weighted_mask.sum(), lm_loss.size(0))
-    # this preserves correct scale of the loss
-    loss = lm_loss.mean() * lm_loss.size(0) / prompt_weighted_mask.sum()
-    # print(loss)
-    del prompt_weighted_mask
+    lm_loss = lm_loss * pwm.view(-1)
+    loss = lm_loss.mean() * lm_loss.size(0) / max(pwm.sum().item(), 1e-8)
+
+    del pwm
     del shift_logits
     del labels
     del input_ids
     del lm_loss
-    
+
     return (loss, outputs) if return_outputs else loss
 
 
@@ -213,8 +207,8 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
         # compatible later on.            \/
         mask = (arange_mask < (batch.pop("prompt_lens") - 1).unsqueeze(1)).float()
         batch["prompt_weighted_mask"] = (
-            # this is the meask i.e. 0.1, 0.1, 1, 1, 1, 1 for prompt_lens = 2 and seq_len = 
-            # 6 because of padding but answer might just be 2 
+            # this is the meask i.e. 0.1, 0.1, 1, 1, 1, 1 for prompt_lens = 2 and seq_len =
+            # 6 because of padding but answer might just be 2
             mask * self.prompt_loss_weight + (1 - mask)
             # so we need to mask the mask to get
             # 0.1, 0.1, 1, 1, 0, 0 and has the correct weight (used for mean calculation)

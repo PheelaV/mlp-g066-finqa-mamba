@@ -265,13 +265,13 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", default=8, type=int, help="The training epochs")
     parser.add_argument(
         "--gradient_steps",
-        default=8,
+        default=1,
         type=float,
         help="The gradient accumulation steps",
     )
     parser.add_argument(
         "--num_workers",
-        default="8",
+        default="all",
         type=str,
         help="Dataloader workers - number or 'all' to use all available cores",
     )

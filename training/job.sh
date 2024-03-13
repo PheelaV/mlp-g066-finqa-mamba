@@ -49,7 +49,15 @@ export HF_DATASETS_CACHE=$DATASET_DIR
 
 # df--gres=gpu:a6000:2
 
-source /home/$STUDENT_ID/miniconda3/bin/activate mlp_g066_training
+# source /home/$STUDENT_ID/miniconda3/bin/activate mlp_g066_training
+
+CONDA_ACTIVATE_SCRIPT="/home/$STUDENT_ID/miniconda3/bin/activate"
+if [[ -f "$CONDA_ACTIVATE_SCRIPT" ]]; then
+    source $CONDA_ACTIVATE_SCRIPT mlp_g066_training
+else
+    echo "Conda activate script not found: $CONDA_ACTIVATE_SCRIPT"
+    exit 1
+fi
 
 # cd ~/repos/mlp-g066-finqa-mamba/training
 # accelerate launch train.py \

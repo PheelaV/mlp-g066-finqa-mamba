@@ -98,7 +98,11 @@ def parse_model_name(args):
         if args.local_rank == 0:
             print("Didn't fina remote model, Trying to get a local model.")
 
-    model_path = os.path.join(args.working_dir, "finetuned_models", args.base_model)
+    model_path = os.path.join(
+        args.working_dir if args.shared_dir is None else args.shared_dir,
+        "finetuned_models",
+        args.base_model,
+    )
     if os.path.exists(model_path):
         return model_path
     else:
@@ -270,7 +274,11 @@ def load_dataset(args, names, from_remote=False, dataset_identifier_map=None):
                     f"Unknown dataset name: {dataset_name}. Please check the dataset identifier map."
                 )
         else:
-            dataset_path_or_name = os.path.join(args.working_dir, "data", dataset_name)
+            dataset_path_or_name = os.path.join(
+                args.working_dir if args.shared_dir is None else args.shared_dir,
+                "data",
+                dataset_name,
+            )
 
         # dataset_path_or_name += dataset_name
 
@@ -302,16 +310,21 @@ def load_dataset(args, names, from_remote=False, dataset_identifier_map=None):
 
         # filter finsquad to have only relevant topics
         if dataset_name == "squad_v2":
-            tmp_dataset = tmp_dataset.filter(
-                lambda example: example["title"].lower() in FINSQUAD_TOPICS,
-                num_proc=args.num_workers,
-            ).map(
-                lambda example: {
-                    "input": example["context"],
-                    "instruction": example["question"],
-                    "output": "".join(example["answers"]['text'])
-                }, num_proc=args.num_workers
-            ).remove_columns(["id", "title", "context", "answers", "question"])
+            tmp_dataset = (
+                tmp_dataset.filter(
+                    lambda example: example["title"].lower() in FINSQUAD_TOPICS,
+                    num_proc=args.num_workers,
+                )
+                .map(
+                    lambda example: {
+                        "input": example["context"],
+                        "instruction": example["question"],
+                        "output": "".join(example["answers"]["text"]),
+                    },
+                    num_proc=args.num_workers,
+                )
+                .remove_columns(["id", "title", "context", "answers", "question"])
+            )
 
         # Check for 'test' split and create it from 'train' if necessary
         if "test" not in tmp_dataset:
@@ -379,7 +392,15 @@ def get_dataset(args, tokenizer, return_text=False):
         print(dataset_id)
     # if dataset is already tokenized, load it
     # unless we specifically want the remote version
-    cache_dataset_path = os.path.join(args.working_dir, "data", dataset_id)
+    cache_dataset_path = os.path.join(
+        args.working_dir if args.shared_dir is None else args.shared_dir,
+        "data",
+        dataset_id,
+    )
+    print(dataset_name)
+    print(dataset_id)
+    print(cache_dataset_path)
+    print(os.path.exists(cache_dataset_path))
     if (
         os.path.exists(cache_dataset_path)
         and not return_text
@@ -436,7 +457,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
     common_args = {
         "run_name": args.run_name,
         "output_dir": os.path.join(
-            args.working_dir, "finetuned_models", f"{args.run_name}_{formatted_time}"
+            args.working_dir, "finetuned_models", f"{args.base_model}_{args.run_name}_{formatted_time}"
         ),
         "num_train_epochs": args.num_epochs,
         # "dataloader_num_workers": args.num_workers,
@@ -450,6 +471,8 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "evaluation_strategy": args.evaluation_strategy,
         "eval_accumulation_steps": args.eval_accumulation_steps,
         # -------------------------------------------
+        "per_device_train_batch_size": args.batch_size,
+        "per_device_eval_batch_size": args.batch_size,
         "learning_rate": args.learning_rate,
         "warmup_ratio": args.warmup_ratio,
         "lr_scheduler_type": args.scheduler,
@@ -459,23 +482,25 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "resume_from_checkpoint": args.resume_from_checkpoint,
         # "label_names":[]
     }
-    
+
     if args.fp16 or args.bf16 and torch.cuda.is_available():
-        common_args.update({
-            "fp16_backend": "apex", # AUTO
-            "fp16_full_eval": True,
-            "fp16_opt_level": "O1",
-            "fp16": args.fp16 & torch.cuda.is_available(),
-            "bf16": args.bf16 & torch.cuda.is_available(),
-        })
+        common_args.update(
+            {
+                "fp16_backend": "apex",  # AUTO
+                "fp16_full_eval": True,
+                "fp16_opt_level": "O1",
+                "fp16": args.fp16 & torch.cuda.is_available(),
+                "bf16": args.bf16 & torch.cuda.is_available(),
+            }
+        )
 
     if args.distributed:
-        common_args.update({
-            # "deepspeed": args.ds_config,
-            "per_device_train_batch_size": args.batch_size,
-            "per_device_eval_batch_size": args.batch_size,
-            "ddp_find_unused_parameters": False,
-        })
+        common_args.update(
+            {
+                # "deepspeed": args.ds_config,
+                "ddp_find_unused_parameters": False,
+            }
+        )
 
     training_args = TrainingArguments(**common_args)
 

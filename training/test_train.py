@@ -1,4 +1,3 @@
-
 import utils
 from collections import namedtuple
 import os
@@ -62,20 +61,31 @@ dataset_args = namedtuple(
         "num_workers",
         "working_dir",
         "local_rank",
+        "shared_dir",
     ],
 )
 dataset_args = dataset_args(
-    "sentiment-train,headline,finred*3,ner*15", args.seq_len, False, None, "default", multiprocessing.cpu_count(), "./", 0
+    "sentiment-train,headline,finred*3,ner*15",
+    args.seq_len,
+    False,
+    None,
+    "default",
+    multiprocessing.cpu_count(),
+    "./",
+    0,
+    None
 )
 # dataset_args = dataset_args("convfinqa", 512, False, None, "default", None)
 
-dataset = utils.get_dataset(args=dataset_args, tokenizer=tokenizer, return_text=args.reference)
+dataset = utils.get_dataset(
+    args=dataset_args, tokenizer=tokenizer, return_text=args.reference
+)
 
 del tokenizer
 training_args = TrainingArguments(
     output_dir="./test_results",
     num_train_epochs=3,
-    per_device_train_batch_size=4,
+    per_device_train_batch_size=8,
     logging_dir="./logs",
     logging_steps=10,
     learning_rate=2e-3,
@@ -123,7 +133,9 @@ else:
         max_seq_length=args.seq_len,
         # dataset_text_field="input_ids", # not nescessary as we are using a customized trainer
         data_collator=custom_training.CustomDataCollatorSeq2Seq(
-            tokenizer, padding=True, prompt_loss_weight=complete_args["prompt_loss_weight"]
+            tokenizer,
+            padding=True,
+            prompt_loss_weight=complete_args["prompt_loss_weight"],
         ),
         tokenized_datasets=True,
         prompt_loss_weight=complete_args["prompt_loss_weight"],

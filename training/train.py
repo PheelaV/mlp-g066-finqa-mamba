@@ -99,12 +99,11 @@ def load_config(json_filepath):
 
 
 def main(args):
-    
     if args.distributed:
         accelerator = Accelerator(log_with="wandb")
         args.local_rank = accelerator.device.index
         args.num_processes = accelerator.num_processes
-        
+
     # device = (
     #     torch.device("cuda")
     #     if torch.cuda.is_available()
@@ -146,7 +145,7 @@ def main(args):
 
     if args.seed_data:
         exit()
-    
+
     if "mamba" in args.base_model:
         model = AutoModelForCausalLM.from_pretrained(model_name)
         # https://github.com/huggingface/transformers/issues/29505
@@ -170,7 +169,6 @@ def main(args):
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     tokenizer = utils.get_tokenizer(args, model_name)
 
-   
     trainer, training_args, common_args = utils.get_trainer(
         args, model, tokenizer, dataset, formatted_time
     )
@@ -188,8 +186,8 @@ def main(args):
             init_kwargs={
                 "dir": args.working_dir,
                 "group": args.run_name,
-            }
-        ) 
+            },
+        )
         accelerator.trackers[0].run.name = args.run_name
     elif not args.distributed:
         wandb.init(
@@ -197,22 +195,29 @@ def main(args):
             name=args.run_name,
             config=common_args,
             dir=args.working_dir,
-            group=args.run_name
+            group=args.run_name,
         )
 
     if args.local_rank == 0:
         start_time = datetime.now()
         print(f"Start Time: {start_time.isoformat()}")
-        wandb.log({"start_time":start_time})
-        
+        wandb.log({"start_time": start_time})
+
     trainer.train()
-    
+
     if args.local_rank == 0:
         end_time = datetime.now()
-        wandb.log({"end_time":end_time})
+        wandb.log({"end_time": end_time})
         print(f"End Time: {end_time.isoformat()}")
     # Save the fine-tuned model
-    trainer.save_model(os.path.join(args.working_dir, "finetuned_models", args.base_model))
+    finetuned_model_run_name = f"{args.base_model}_{args.run_name}_{formatted_time}"
+    trainer.save_model(
+        os.path.join(
+            args.working_dir if args.shared_dir is None else args.shared_dir,
+            "finetuned_models",
+            finetuned_model_run_name,
+        )
+    )
 
 
 # In[4]:
@@ -293,7 +298,18 @@ if __name__ == "__main__":
         "--working_dir",
         default="./",
         type=str,
-        help="Location where the model and logs will be saved as well as datasets read from.",
+        help="Saving logs as well as saving and retrieving models, datasets, modle checkpointing",
+    )
+    # some clusters need scratch disks which are not shared across nodes so that gives a rise for 
+    # the need to read data from a shared location, then save the model to that shared location, 
+    # but checkpoint to a different location
+    # I am resolving this by giving the option to save the model to a different location as well as 
+    # read the data from a different location
+    parser.add_argument(
+        "--shared_dir",
+        default=None,
+        type=str,
+        help="Overwrite location from which the model or data gets saved or read from locally",
     )
     parser.add_argument("--instruct_template", default="default")
     parser.add_argument("--load_best_model", default="False", type=bool)

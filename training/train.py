@@ -394,7 +394,7 @@ if __name__ == "__main__":
     if "_comment" in config_defaults:
         config_defaults.pop("_comment")
     # Update parser defaults based on JSON configuration
-    # parser.set_defaults(**config_defaults)
+    parser.set_defaults(**config_defaults)
     # Now parse the rest of the arguments with the updated defaults
     # args = parser.parse_args(remaining_argv)
     args = parser.parse_args("") if is_interactive() else parser.parse_args()

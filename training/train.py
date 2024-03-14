@@ -313,7 +313,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--instruct_template", default="default")
     parser.add_argument(
-        "--load_best_model", default=True, actionaction=argparse.BooleanOptionalAction
+        "--load_best_model", default=True, action=argparse.BooleanOptionalAction
     )
     parser.add_argument("--log_interval", default=20, type=int)
     parser.add_argument("--evaluation_strategy", default="steps", type=str)

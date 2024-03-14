@@ -102,7 +102,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", required=True, type=str)
     parser.add_argument("--base_model", required=True, type=str, choices=['chatglm2', 'llama2', 'llama2-13b', 'llama2-13b-nr', 'baichuan', 'falcon', 'internlm', 'qwen', 'mpt', 'bloom', 'pythia'])
-    parser.add_argument("--peft_model", required=True, type=str)
+    parser.add_argument("--peft_model", required=False, type=str)
     parser.add_argument("--max_length", default=512, type=int)
     parser.add_argument("--batch_size", default=4, type=int, help="The train batch size per device")
     parser.add_argument("--instruct_template", default='default')
@@ -111,6 +111,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     print(args.base_model)
-    print(args.peft_model)
+    # print(args.peft_model)
     
     main(args)

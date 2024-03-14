@@ -2,14 +2,13 @@
 # export TOKENIZERS_PARALLELISM=0
 
 
-#---- Basic Testing ----
+#---- Basic Testing FPB, FiQA-SA, TFNS, NWGI ----
 
 python benchmarks.py \
---dataset re \
+--dataset fpb, fiqa, tfns, nwgi \
 --base_model pythia \
---peft_model ../finetuned_models/finred-llama2-linear_202310012254 \
---batch_size 8 \
---max_length 512 \
+--batch_size 16 \
+--max_length 128 \
 --from_remote True
 
 

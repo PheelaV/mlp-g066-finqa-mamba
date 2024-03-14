@@ -121,7 +121,8 @@ def test_re(args, model, tokenizer):
 
     for idx, inputs in enumerate(tqdm(dataloader)):
         inputs = {key: value.to(model.device) for key, value in inputs.items()}
-        res = model.generate(**inputs, max_length=args.max_length, eos_token_id=tokenizer.eos_token_id, max_new_tokens=128)
+        # res = model.generate(**inputs, max_length=args.max_length, eos_token_id=tokenizer.eos_token_id, max_new_tokens=128)
+        res = model.generate(**inputs, eos_token_id=tokenizer.eos_token_id, max_new_tokens=128)
         res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
         if (idx + 1) % log_interval == 0:
             tqdm.write(f'{idx}: {res_sentences[0]}')

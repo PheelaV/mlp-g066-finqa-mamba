@@ -14,6 +14,8 @@ parser.add_argument("--lora", type=bool, default=False)
 parser.add_argument("--model_type", type=str)
 parser.add_argument("--seq_len", type=int, default=512)
 parser.add_argument("--reference", default=False, action=argparse.BooleanOptionalAction)
+parser.add_argument("--batch_size", type=int, default=8)
+parser.add_argument("--gradient_step", type=int, default=1)
 
 args = parser.parse_args()
 
@@ -83,9 +85,10 @@ dataset = utils.get_dataset(
 
 del tokenizer
 training_args = TrainingArguments(
+    per_device_train_batch_size=args.batch_size,
+    gradient_accumulation_steps=args.gradient_step,
     output_dir="./test_results",
     num_train_epochs=3,
-    per_device_train_batch_size=8,
     logging_dir="./logs",
     logging_steps=10,
     learning_rate=2e-3,

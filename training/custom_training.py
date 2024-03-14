@@ -106,13 +106,11 @@ class CustomSFTTrainer(SFTTrainer):
     def __init__(
         self,
         *args,
-        prompt_loss_weight: float = 1.0,
         padding_token_id=-100,
         **kwargs,
     ):
         # if ""
         super().__init__(*args, **kwargs)
-        self.prompt_loss_weight = prompt_loss_weight
         self.padding_token_id = padding_token_id
 
     def compute_loss(self, model, inputs, return_outputs=False):

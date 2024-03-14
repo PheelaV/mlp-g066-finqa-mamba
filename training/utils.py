@@ -459,28 +459,32 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "output_dir": os.path.join(
             args.working_dir, "finetuned_models", f"{args.base_model}_{args.run_name}_{formatted_time}"
         ),
-        "num_train_epochs": args.num_epochs,
         # "dataloader_num_workers": args.num_workers,
         "remove_unused_columns": False,  # for pre-tokenized datasets
+        "save_total_limit": 5, # save only the last 5 checkpoints
         # -------------------------------------------
         "report_to": "wandb",
         "logging_dir": os.path.join(args.working_dir, "logs"),
         "logging_steps": args.log_interval,
+        "eval_accumulation_steps": args.eval_accumulation_steps,
+        # as we are
+        "load_best_model_at_end": args.load_best_model,
+        # the save and eval strat must match 
+        "evaluation_strategy": args.evaluation_strategy,
+        "save_strategy": args.evaluation_strategy,
+        # and their numbers must be a multiple
         "save_steps": args.eval_steps,
         "eval_steps": args.eval_steps,
-        "evaluation_strategy": args.evaluation_strategy,
-        "eval_accumulation_steps": args.eval_accumulation_steps,
         # -------------------------------------------
+        "num_train_epochs": args.num_epochs,
         "per_device_train_batch_size": args.batch_size,
         "per_device_eval_batch_size": args.batch_size,
         "learning_rate": args.learning_rate,
         "warmup_ratio": args.warmup_ratio,
         "lr_scheduler_type": args.scheduler,
-        "load_best_model_at_end": args.load_best_model,
         "optim": args.optim,
         "gradient_accumulation_steps": args.gradient_steps,
         "resume_from_checkpoint": args.resume_from_checkpoint,
-        # "label_names":[]
     }
 
     if args.fp16 or args.bf16 and torch.cuda.is_available():
@@ -538,9 +542,9 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
             train_dataset=dataset["train"],
             eval_dataset=dataset["test"],
             data_collator=custom_training.CustomDataCollatorSeq2Seq(
-                tokenizer, padding=True
+                tokenizer, padding=True,
+                prompt_loss_weight=args.prompt_loss_weight
             ),
-            prompt_loss_weight=args.prompt_loss_weight,
             max_seq_length=args.max_length,  # just to keep the warning silent as we are handling this ourselves
             tokenized_datasets=True,  # the secret sauce to make this work
         )
@@ -554,9 +558,9 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
             train_dataset=dataset["train"],
             eval_dataset=dataset["test"],
             data_collator=custom_training.CustomDataCollatorSeq2Seq(
-                tokenizer, padding=True
+                tokenizer, padding=True,
+                prompt_loss_weight=args.prompt_loss_weight,
             ),
-            prompt_loss_weight=args.prompt_loss_weight,
             max_seq_length=args.max_length,  # just to keep the warning silent as we are handling this ourselves
             tokenized_datasets=True,
         )

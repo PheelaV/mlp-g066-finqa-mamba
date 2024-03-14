@@ -72,7 +72,8 @@ dataset_args = dataset_args(
     False,
     None,
     "default",
-    multiprocessing.cpu_count(),
+    # multiprocessing.cpu_count() - 2,
+    1,
     "./",
     0,
     None
@@ -86,9 +87,10 @@ dataset = utils.get_dataset(
 del tokenizer
 training_args = TrainingArguments(
     per_device_train_batch_size=args.batch_size,
+    per_device_eval_batch_size=args.batch_size,
     gradient_accumulation_steps=args.gradient_step,
     output_dir="./test_results",
-    num_train_epochs=3,
+    num_train_epochs=4,
     logging_dir="./logs",
     logging_steps=10,
     learning_rate=2e-3,
@@ -96,6 +98,9 @@ training_args = TrainingArguments(
     report_to="wandb",
     eval_steps=0.1,
     remove_unused_columns=args.reference,  # important because we are injecting custom metadata for the loss function
+    # testing to mirror train steps
+    save_steps=0.1,
+    # warmup_ratio=0.05
 )
 
 lora_config = LoraConfig(
@@ -114,7 +119,12 @@ tokenizer = AutoTokenizer.from_pretrained(model_id)
 if tokenizer.pad_token_id is None:
     tokenizer.pad_token = tokenizer.eos_token
     tokenizer.pad_token_id = tokenizer.eos_token_id
+# print(f"training_args.per_device_train_batch_size: {training_args.per_device_train_batch_size}")
+# print(f"training_args.gradient_accumulation_steps: {training_args.gradient_accumulation_steps}")
+# print(f"training_args.num_train_epochs: {training_args.num_train_epochs}")
+# print(training_args)
 
+# exit()
 if args.reference:
     trainer = SFTTrainer(
         model=model,
@@ -140,7 +150,6 @@ else:
             padding=True,
             prompt_loss_weight=complete_args["prompt_loss_weight"],
         ),
-        tokenized_datasets=True,
-        prompt_loss_weight=complete_args["prompt_loss_weight"],
+        tokenized_datasets=True
     )
 trainer.train()

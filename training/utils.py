@@ -328,7 +328,7 @@ def load_dataset(args, names, from_remote=False, dataset_identifier_map=None):
                 )
                 .remove_columns(["id", "title", "context", "answers", "question"])
             )
-            
+
         # Adjusting the mathqa dataset match FinGPT attributes
         if dataset_name == "mathqa":
             mathqa_instruction = "Given the information provided in the input, "

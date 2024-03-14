@@ -72,6 +72,7 @@ MODELS_MAP = {
     # 'bloom': ('bigscience/bloom-7b1', 'base_models/bloom-7b1'),
     "mamba-small": "state-spaces/mamba-130m-hf",
     "pythia-small": "EleutherAI/pythia-70m-deduped",
+    "pythia-medsmall": "EleutherAI/pythia-160m-deduped",
     "mamba-medium": "state-spaces/mamba-1.4b-hf",
     "pythia-medium": "EleutherAI/pythia-1.4b-deduped",
     "mamba-big": "state-spaces/mamba-2.8b-hf",

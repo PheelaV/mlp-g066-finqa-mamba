@@ -42,7 +42,7 @@ FINSQUAD_TOPICS = set(
 )
 
 DATASETS_MAP = {
-    "squad_v2": "rajpurkar/squad_v2",
+    "squad": "rajpurkar/squad",
     "mathqa": "microsoft/orca-math-word-problems-200k",
     "fiqa_qa": "FinGPT/fingpt-fiqa_qa",
     "sentiment-train": "FinGPT/fingpt-sentiment-train",
@@ -309,7 +309,10 @@ def load_dataset(args, names, from_remote=False, dataset_identifier_map=None):
             raise RuntimeError(f"Failed to load the dataset: {str(e)}")
 
         # filter finsquad to have only relevant topics
-        if dataset_name == "squad_v2":
+        if dataset_name == "squad":
+            squad_instruction = "Given the information in the input, please "
+            "provide" " a logical answer to the question at the end of the "
+            "input by taking clues and relevant information from there."
             tmp_dataset = (
                 tmp_dataset.filter(
                     lambda example: example["title"].lower() in FINSQUAD_TOPICS,
@@ -317,13 +320,28 @@ def load_dataset(args, names, from_remote=False, dataset_identifier_map=None):
                 )
                 .map(
                     lambda example: {
-                        "input": example["context"],
-                        "instruction": example["question"],
+                        "input": example["context"] + " " + example["question"],
+                        "instruction": squad_instruction,
                         "output": "".join(example["answers"]["text"]),
                     },
                     num_proc=args.num_workers,
                 )
                 .remove_columns(["id", "title", "context", "answers", "question"])
+            )
+            
+        # Adjusting the mathqa dataset match FinGPT attributes
+        if dataset_name == "mathqa":
+            mathqa_instruction = "Given the information provided in the input, "
+            "please provide a logical mathematical answer to the question in the"
+            " input by using relevant information from there."
+            # Rename 'question' to 'input', 'answer' to 'output'
+            tmp_dataset = tmp_dataset.map(
+                lambda example: {
+                    "input": example["question"],
+                    "instruction": mathqa_instruction,
+                    "output": example["answer"],
+                },
+                remove_columns=["question", "answer"],
             )
 
         # Check for 'test' split and create it from 'train' if necessary
@@ -457,11 +475,13 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
     common_args = {
         "run_name": args.run_name,
         "output_dir": os.path.join(
-            args.working_dir, "finetuned_models", f"{args.base_model}_{args.run_name}_{formatted_time}"
+            args.working_dir,
+            "finetuned_models",
+            f"{args.base_model}_{args.run_name}_{formatted_time}",
         ),
         # "dataloader_num_workers": args.num_workers,
         "remove_unused_columns": False,  # for pre-tokenized datasets
-        "save_total_limit": 5, # save only the last 5 checkpoints
+        "save_total_limit": 5,  # save only the last 5 checkpoints
         # -------------------------------------------
         "report_to": "wandb",
         "logging_dir": os.path.join(args.working_dir, "logs"),
@@ -469,7 +489,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "eval_accumulation_steps": args.eval_accumulation_steps,
         # as we are
         "load_best_model_at_end": args.load_best_model,
-        # the save and eval strat must match 
+        # the save and eval strat must match
         "evaluation_strategy": args.evaluation_strategy,
         "save_strategy": args.evaluation_strategy,
         # and their numbers must be a multiple
@@ -542,8 +562,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
             train_dataset=dataset["train"],
             eval_dataset=dataset["test"],
             data_collator=custom_training.CustomDataCollatorSeq2Seq(
-                tokenizer, padding=True,
-                prompt_loss_weight=args.prompt_loss_weight
+                tokenizer, padding=True, prompt_loss_weight=args.prompt_loss_weight
             ),
             max_seq_length=args.max_length,  # just to keep the warning silent as we are handling this ourselves
             tokenized_datasets=True,  # the secret sauce to make this work
@@ -558,7 +577,8 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
             train_dataset=dataset["train"],
             eval_dataset=dataset["test"],
             data_collator=custom_training.CustomDataCollatorSeq2Seq(
-                tokenizer, padding=True,
+                tokenizer,
+                padding=True,
                 prompt_loss_weight=args.prompt_loss_weight,
             ),
             max_seq_length=args.max_length,  # just to keep the warning silent as we are handling this ourselves

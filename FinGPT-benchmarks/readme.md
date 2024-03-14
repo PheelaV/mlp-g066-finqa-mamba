@@ -167,3 +167,11 @@ For Zero-shot Evaluation on Sentiment Analysis, we use multiple prompts and eval
 The task indicators are `fiqa_mlt` and `fpb_mlt`.
 
 
+
+
+# Mamba Project Specific:
+
+
+Download the data first before running benchmarks in either `data/download_data.ipynb` or `data/download_data.py`.
+
+

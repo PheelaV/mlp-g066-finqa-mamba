@@ -5,7 +5,7 @@
 #---- Basic Testing FPB, FiQA-SA, TFNS, NWGI ----
 
 python benchmarks.py \
---dataset fpb, fiqa, tfns, nwgi \
+--dataset fpb,fiqa,tfns,nwgi \
 --base_model pythia \
 --batch_size 16 \
 --max_length 128 \

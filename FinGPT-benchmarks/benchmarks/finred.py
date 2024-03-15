@@ -1,7 +1,9 @@
 from seqeval.metrics import classification_report
-from datasets import load_dataset, load_from_disk
+from datasets import load_dataset, load_from_disk, Dataset, DatasetDict
 from tqdm import tqdm
+from log_dtos import ClsMetrics
 import datasets
+from typing import Tuple
 import torch
 from torch.utils.data import DataLoader
 from functools import partial
@@ -94,11 +96,10 @@ def calc_metric(gt_list, pred_list):
     recall = true_positives / (true_positives + false_negatives)
     f1_score = 2 * (precision * recall) / (precision + recall)
 
-    # Print the results
-    print(f"Precisions: {precision}, Recalls: {recall}, F1-Scores: {f1_score}")
+    return precision, recall, f1_score
     
 
-def test_re(args, model, tokenizer, silent=True):
+def test_re(args, model, tokenizer, silent=True) -> Tuple[Dataset | DatasetDict, ClsMetrics]:
 
     dataset = load_from_disk('../data/fingpt-finred-re')['test']#.select(range(50))
     dataset = dataset.train_test_split(0.2, seed=42)['test']
@@ -124,8 +125,25 @@ def test_re(args, model, tokenizer, silent=True):
         res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
         if (idx + 1) % log_interval == 0 and not silent:
             tqdm.write(f'{idx}: {res_sentences[0]}')
-        out_text = [o.split("Answer: ")[1] for o in res_sentences]
-        out_text_list += out_text
+        # So this is problematic, but better than the original alternative:
+        # `out_text = [o.split("Answer: ")[1] if "Answer: " in o else "" for o in res_sentences]``
+        # out_text_list += out_text
+        # what if the answer has multiple answers? Then this restricts it to the
+        # first answer only -> we are keeping original behaviour, just making sure
+        # that when the model does not return an answer, we don't don't crash on the
+        # indexig
+        # TODO: see if this chanes the numbers?
+        for answer in res_sentences:
+            # if both
+            if "Answer: " in answer:
+                # and
+                out_text = answer.split("Answer: ")
+                if len(out_text) >= 2:
+                    # then
+                    out_text_list.append(out_text[1])
+                    continue
+            # otherwise in any case
+            out_text_list.append("")
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
         elif torch.cuda.is_available():
@@ -141,15 +159,19 @@ def test_re(args, model, tokenizer, silent=True):
     
     label = [[tuple(t) for t in d.tolist()] for d in dataset['label']]
     pred = [[tuple(t) for t in d.tolist()] for d in dataset['pred']]
+    precision, recall, f1_score =  calc_metric(label, pred)
     
     label_re = [[t[0] for t in d.tolist()] for d in dataset['label']]
     pred_re = [[t[0] for t in d.tolist()] for d in dataset['pred']]
+    precision_re, recall_re, f1_score_re =  calc_metric(label_re, pred_re)
     print()
     print("*"*10)
     print("FINRED")
-    calc_metric(label, pred)
+    print(f"Precisions: {precision}, Recalls: {recall}, F1-Scores: {f1_score}")
+
     print("*"*10)
-    calc_metric(label_re, pred_re)
+    print(f"RE? Precisions: {precision_re}, Recalls: {recall_re}, F1-Scores: {f1_score_re}")
     print("*"*10)
     print()
-    return dataset
+    
+    return dataset, (precision, recall, f1_score, precision_re, recall_re, f1_score_re)

@@ -2,11 +2,14 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from sklearn.metrics import accuracy_score,f1_score
-from datasets import load_dataset, load_from_disk, Dataset
+from datasets import load_dataset, load_from_disk, Dataset, DatasetDict
+
+from log_dtos import ClsMetrics
+from typing import Tuple, List
+
 from tqdm import tqdm
 import datasets
 import torch
-
 from torch.utils.data import DataLoader
 from functools import partial
 
@@ -49,7 +52,7 @@ def vote_output(x):
     else:
         return 'neutral'
     
-def test_fpb(args, model, tokenizer, prompt_fun=None, silent=True):
+def test_fpb(args, model, tokenizer, prompt_fun=None, silent=True) -> Tuple[Dataset | DatasetDict, ClsMetrics]:
     # print what test is being done
     print("Testing on Financial Phrasebank dataset")
 
@@ -87,9 +90,27 @@ def test_fpb(args, model, tokenizer, prompt_fun=None, silent=True):
             tokens[k] = tokens[k].to(model.device)
         res = model.generate(**tokens, max_length=512, eos_token_id=tokenizer.eos_token_id, pad_token_id=tokenizer.pad_token_id)
         res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
-        # print(f'{i}: {res_sentences[0]}')
-        out_text = [o.split("Answer: ")[1] for o in res_sentences]
-        out_text_list += out_text
+        if not silent:
+            print(f'{i}: {res_sentences[0]}')
+        # So this is problematic, but better than the original alternative:
+        # `out_text = [o.split("Answer: ")[1] if "Answer: " in o else "" for o in res_sentences]``
+        # out_text_list += out_text
+        # what if the answer has multiple answers? Then this restricts it to the
+        # first answer only -> we are keeping original behaviour, just making sure
+        # that when the model does not return an answer, we don't don't crash on the
+        # indexig
+        # TODO: see if this chanes the numbers?
+        for answer in res_sentences:
+            # if both
+            if "Answer: " in answer:
+                # and
+                out_text = answer.split("Answer: ")
+                if len(out_text) >= 2:
+                    # then
+                    out_text_list.append(out_text[1])
+                    continue
+            # otherwise in any case
+            out_text_list.append("")
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
         elif torch.cuda.is_available():
@@ -111,10 +132,10 @@ def test_fpb(args, model, tokenizer, prompt_fun=None, silent=True):
     print("*"*10)
     print()
 
-    return instructions
+    return instructions, ClsMetrics(acc, f1_macro, f1_micro, f1_weighted)
 
 
-def test_fpb_mlt(args, model, tokenizer, silent=True):
+def test_fpb_mlt(args, model, tokenizer, silent=True) -> Tuple[Dataset | DatasetDict, List[ClsMetrics]]:
     print("Running test_fpb_mlt")
     batch_size = args.batch_size
     # instructions = load_dataset("financial_phrasebank", "sentences_50agree")
@@ -155,10 +176,26 @@ def test_fpb_mlt(args, model, tokenizer, silent=True):
             res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
             if not silent:
                 tqdm.write(f'{idx}: {res_sentences[0]}')
-            # if (idx + 1) % log_interval == 0:
-            #     tqdm.write(f'{idx}: {res_sentences[0]}')
-            out_text = [o.split("Answer: ")[1] for o in res_sentences]
-            out_texts_list[i] += out_text
+            # So this is problematic, but better than the original alternative:
+            # `            out_text = [o.split("Answer: ")[1] for o in res_sentences]
+            #              out_texts_list[i] += out_text`
+            # out_text_list += out_text
+            # what if the answer has multiple answers? Then this restricts it to the
+            # first answer only -> we are keeping original behaviour, just making sure
+            # that when the model does not return an answer, we don't don't crash on the
+            # indexig
+            # TODO: see if this chanes the numbers?
+            for answer in res_sentences:
+                # if both
+                if "Answer: " in answer:
+                    # and
+                    out_text = answer.split("Answer: ")
+                    if len(out_text) >= 2:
+                        # then
+                        out_texts_list[i].append(out_text[1])
+                        continue
+                # otherwise in any case
+                out_texts_list[i].append("")
             if torch.backends.mps.is_available():
                 torch.mps.empty_cache()
             elif torch.cuda.is_available():
@@ -175,15 +212,19 @@ def test_fpb_mlt(args, model, tokenizer, silent=True):
     print("*"*10)
     print("FPB")
     print("*"*10)
+    
+    metrics = []
     for k in [f"out_text_{i}" for i in range(len(templates))] + ["new_out"]:
 
         acc = accuracy_score(dataset["target"], dataset[k])
         f1_macro = f1_score(dataset["target"], dataset[k], average="macro")
         f1_micro = f1_score(dataset["target"], dataset[k], average="micro")
         f1_weighted = f1_score(dataset["target"], dataset[k], average="weighted")
+        
         print(f"Acc: {acc}. F1 macro: {f1_macro}. F1 micro: {f1_micro}. F1 weighted (BloombergGPT): {f1_weighted}. ")
         print("*"*10)
+        metrics.append(ClsMetrics(acc, f1_macro, f1_micro, f1_weighted))
     
     print()
 
-    return dataset
+    return dataset, metrics

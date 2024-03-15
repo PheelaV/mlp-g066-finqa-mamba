@@ -32,7 +32,7 @@ def map_output(feature):
     return {'label': label, 'pred': pred}
 
 
-def test_headline(args, model, tokenizer):
+def test_headline(args, model, tokenizer, silent=True):
     
     # dataset = load_from_disk('../data/fingpt-headline')['test']#.select(range(300))
     dataset = load_from_disk('../data/fingpt-headline-instruct')['test']#.select(range(300))
@@ -55,18 +55,21 @@ def test_headline(args, model, tokenizer):
         inputs = {key: value.to(model.device) for key, value in inputs.items()}
         res = model.generate(**inputs, max_length=args.max_length, eos_token_id=tokenizer.eos_token_id)
         res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
-        tqdm.write(f'{idx}: {res_sentences[0]}')
-        if (idx + 1) % log_interval == 0:
+        if (idx + 1) % log_interval == 0 and not silent:
             tqdm.write(f'{idx}: {res_sentences[0]}')
         out_text = [o.split("Answer: ")[1] for o in res_sentences]
         out_text_list += out_text
-        torch.cuda.empty_cache()
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        elif torch.cuda.is_available():
+            torch.cuda.empty_cache()
     
     dataset = dataset.add_column("out_text", out_text_list)
     dataset = dataset.map(map_output, load_from_cache_file=False)    
     dataset = dataset.to_pandas()
     
-    print(dataset)
+    if not silent:
+        print(dataset)
     dataset.to_csv('tmp.csv')
         
     # binary
@@ -76,9 +79,15 @@ def test_headline(args, model, tokenizer):
     # multi-class
     pred, label = binary2multi(dataset)
 
+    print()
+    print("*"*10)
+    print("HEADLINE")
+    print("*"*10)
     print(f"\n|| Acc: {acc} || F1 binary: {f1} ||\n")
     print(classification_report(label, pred, digits=4, target_names=['price or not', 'price up', 'price stable',
                                                                      'price down', 'price past', 'price future',
                                                                      'event past', 'event future', 'asset comp']))
+    print("*"*10)
+    print()
 
     return dataset

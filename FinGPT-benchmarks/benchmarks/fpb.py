@@ -49,7 +49,8 @@ def vote_output(x):
     else:
         return 'neutral'
     
-def test_fpb(args, model, tokenizer, prompt_fun=None):
+def test_fpb(args, model, tokenizer, prompt_fun=None, silent=True):
+    print("Running test_fpb")
     batch_size = args.batch_size
     # instructions = load_dataset("financial_phrasebank", "sentences_50agree")
     instructions = load_from_disk("../data/financial_phrasebank-sentences_50agree/")
@@ -65,15 +66,15 @@ def test_fpb(args, model, tokenizer, prompt_fun=None):
         instructions["instruction"] = instructions.apply(prompt_fun, axis = 1)
     
     instructions[["context","target"]] = instructions.apply(format_example, axis = 1, result_type="expand")
-
     # print example
-    print(f"\n\nPrompt example:\n{instructions['context'][0]}\n\n")
-
+    if not silent:
+        print(f"\n\nPrompt example:\n{instructions['context'][0]}\n\n")
 
     context = instructions['context'].tolist()
     
     total_steps = instructions.shape[0]//batch_size + 1
-    print(f"Total len: {len(context)}. Batchsize: {batch_size}. Total steps: {total_steps}")
+    if not silent:
+        print(f"Total len: {len(context)}. Batchsize: {batch_size}. Total steps: {total_steps}")
 
 
     out_text_list = []
@@ -81,13 +82,16 @@ def test_fpb(args, model, tokenizer, prompt_fun=None):
         tmp_context = context[i* batch_size:(i+1)* batch_size]
         tokens = tokenizer(tmp_context, return_tensors='pt', padding=True, max_length=512, return_token_type_ids=False)
         for k in tokens.keys():
-            tokens[k] = tokens[k].cuda()
-        res = model.generate(**tokens, max_length=512, eos_token_id=tokenizer.eos_token_id)
+            tokens[k] = tokens[k].to(model.device)
+        res = model.generate(**tokens, max_length=512, eos_token_id=tokenizer.eos_token_id, pad_token_id=tokenizer.pad_token_id)
         res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
         # print(f'{i}: {res_sentences[0]}')
         out_text = [o.split("Answer: ")[1] for o in res_sentences]
         out_text_list += out_text
-        torch.cuda.empty_cache()
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        elif torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     instructions["out_text"] = out_text_list
     instructions["new_target"] = instructions["target"].apply(change_target)
@@ -98,12 +102,18 @@ def test_fpb(args, model, tokenizer, prompt_fun=None):
     f1_micro = f1_score(instructions["new_target"], instructions["new_out"], average = "micro")
     f1_weighted = f1_score(instructions["new_target"], instructions["new_out"], average = "weighted")
 
+    print()
+    print("*"*10)
+    print("FPB")
     print(f"Acc: {acc}. F1 macro: {f1_macro}. F1 micro: {f1_micro}. F1 weighted (BloombergGPT): {f1_weighted}. ")
+    print("*"*10)
+    print()
 
     return instructions
 
 
-def test_fpb_mlt(args, model, tokenizer):
+def test_fpb_mlt(args, model, tokenizer, silent=True):
+    print("Running test_fpb_mlt")
     batch_size = args.batch_size
     # instructions = load_dataset("financial_phrasebank", "sentences_50agree")
     dataset = load_from_disk('../data/financial_phrasebank-sentences_50agree/')
@@ -139,14 +149,18 @@ def test_fpb_mlt(args, model, tokenizer):
 
         for idx, inputs in enumerate(tqdm(dataloader)):
             inputs = {key: value.to(model.device) for key, value in inputs.items()}
-            res = model.generate(**inputs, do_sample=False, max_length=args.max_length, eos_token_id=tokenizer.eos_token_id, max_new_tokens=10)
+            res = model.generate(**inputs, do_sample=False, max_length=args.max_length, eos_token_id=tokenizer.eos_token_id, max_new_tokens=10, pad_token_id=tokenizer.pad_token_id)
             res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
-            tqdm.write(f'{idx}: {res_sentences[0]}')
+            if not silent:
+                tqdm.write(f'{idx}: {res_sentences[0]}')
             # if (idx + 1) % log_interval == 0:
             #     tqdm.write(f'{idx}: {res_sentences[0]}')
             out_text = [o.split("Answer: ")[1] for o in res_sentences]
             out_texts_list[i] += out_text
-            torch.cuda.empty_cache()
+            if torch.backends.mps.is_available():
+                torch.mps.empty_cache()
+            elif torch.cuda.is_available():
+                torch.cuda.empty_cache()
             
     for i in range(len(templates)):
         dataset[f"out_text_{i}"] = out_texts_list[i]
@@ -155,13 +169,19 @@ def test_fpb_mlt(args, model, tokenizer):
     dataset["new_out"] = dataset.apply(vote_output, axis=1, result_type="expand")
     dataset.to_csv('tmp.csv')
 
+    print()
+    print("*"*10)
+    print("FPB")
+    print("*"*10)
     for k in [f"out_text_{i}" for i in range(len(templates))] + ["new_out"]:
 
         acc = accuracy_score(dataset["target"], dataset[k])
         f1_macro = f1_score(dataset["target"], dataset[k], average="macro")
         f1_micro = f1_score(dataset["target"], dataset[k], average="micro")
         f1_weighted = f1_score(dataset["target"], dataset[k], average="weighted")
-
         print(f"Acc: {acc}. F1 macro: {f1_macro}. F1 micro: {f1_micro}. F1 weighted (BloombergGPT): {f1_weighted}. ")
+        print("*"*10)
+    
+    print()
 
     return dataset

@@ -1,5 +1,4 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from peft import PeftModel, get_peft_model, LoraConfig, TaskType  # 0.4.0
 import torch
 import argparse
 
@@ -13,12 +12,23 @@ from ner import test_ner
 from convfinqa import test_convfinqa
 from fineval import test_fineval
 from finred import test_re
-
-
+from utils import parse_model_name
 import sys
-sys.path.append('../')
-from utils import *
 
+sys.path.append('../')
+
+def get_tokenizer(args, model_name):
+    """
+    Load the tokenizer and set the special tokens, specific to the model
+    """
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    if "mamba" in args.base_model or "pythia" in args.base_model:
+        # these were defaults either way
+        tokenizer.eos_token = "<|endoftext|>"
+        tokenizer.pad_token = "<|padding|>"
+        tokenizer.eos_token_id = tokenizer.convert_tokens_to_ids(tokenizer.eos_token)
+        tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids(tokenizer.pad_token)
+    return tokenizer
 
 def main(args):
     if args.from_remote:

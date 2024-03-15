@@ -55,7 +55,7 @@ def vote_output(x):
         return 'neutral'
     
 
-def test_fiqa(args, model, tokenizer, prompt_fun=add_instructions):
+def test_fiqa(args, model, tokenizer, prompt_fun=add_instructions, silent=True):
     batch_size = args.batch_size
     dataset = load_dataset('pauri32/fiqa-2018')
     # dataset = load_from_disk('../data/fiqa-2018/')
@@ -86,14 +86,18 @@ def test_fiqa(args, model, tokenizer, prompt_fun=add_instructions):
         tokens = tokenizer(tmp_context, return_tensors='pt', padding=True, max_length=512, return_token_type_ids=False)
         # tokens.pop('token_type_ids')
         for k in tokens.keys():
-            tokens[k] = tokens[k].cuda()
+            tokens[k] = tokens[k].to(model.device)
         
-        res = model.generate(**tokens, max_length=512, eos_token_id=tokenizer.eos_token_id)
+        res = model.generate(**tokens, max_length=512, eos_token_id=tokenizer.eos_token_id, pad_token_id=tokenizer.pad_token_id)
         res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
-        tqdm.write(f'{i}: {res_sentences[0]}')
+        if not silent:
+            tqdm.write(f'{i}: {res_sentences[0]}')
         out_text = [o.split("Answer: ")[1] for o in res_sentences]
         out_text_list += out_text
-        torch.cuda.empty_cache()
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        elif torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     dataset["out_text"] = out_text_list
     dataset["new_target"] = dataset["target"].apply(change_target)
@@ -104,7 +108,12 @@ def test_fiqa(args, model, tokenizer, prompt_fun=add_instructions):
     f1_micro = f1_score(dataset["new_target"], dataset["new_out"], average = "micro")
     f1_weighted = f1_score(dataset["new_target"], dataset["new_out"], average = "weighted")
 
+    print()
+    print("*"*10)
+    print("FIQA")
     print(f"Acc: {acc}. F1 macro: {f1_macro}. F1 micro: {f1_micro}. F1 weighted (BloombergGPT): {f1_weighted}. ")
+    print("*"*10)
+    print()
 
     return dataset
 
@@ -153,7 +162,10 @@ def test_fiqa_mlt(args, model, tokenizer):
             #     tqdm.write(f'{idx}: {res_sentences[0]}')
             out_text = [o.split("Answer: ")[1] for o in res_sentences]
             out_texts_list[i] += out_text
-            torch.cuda.empty_cache()
+            if torch.backends.mps.is_available():
+                torch.mps.empty_cache()
+            elif torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
     for i in range(len(templates)):
         dataset[f"out_text_{i}"] = out_texts_list[i]
@@ -163,13 +175,19 @@ def test_fiqa_mlt(args, model, tokenizer):
 
     dataset.to_csv('tmp.csv')
     
+    print()
+    print("*"*10)
+    print("FIQA")
+    print("*"*10)
     for k in [f"out_text_{i}" for i in range(len(templates))] + ["new_out"]:
-
         acc = accuracy_score(dataset["target"], dataset[k])
         f1_macro = f1_score(dataset["target"], dataset[k], average="macro")
         f1_micro = f1_score(dataset["target"], dataset[k], average="micro")
         f1_weighted = f1_score(dataset["target"], dataset[k], average="weighted")
 
         print(f"Acc: {acc}. F1 macro: {f1_macro}. F1 micro: {f1_micro}. F1 weighted (BloombergGPT): {f1_weighted}. ")
+        print("*"*10)
+    
+    print()
 
     return dataset

@@ -95,12 +95,10 @@ def calc_metric(gt_list, pred_list):
     f1_score = 2 * (precision * recall) / (precision + recall)
 
     # Print the results
-    print("Precision:", precision)
-    print("Recall:", recall)
-    print("F1-Score:", f1_score)
+    print(f"Precisions: {precision}, Recalls: {recall}, F1-Scores: {f1_score}")
     
 
-def test_re(args, model, tokenizer):
+def test_re(args, model, tokenizer, silent=True):
 
     dataset = load_from_disk('../data/fingpt-finred-re')['test']#.select(range(50))
     dataset = dataset.train_test_split(0.2, seed=42)['test']
@@ -122,19 +120,23 @@ def test_re(args, model, tokenizer):
     for idx, inputs in enumerate(tqdm(dataloader)):
         inputs = {key: value.to(model.device) for key, value in inputs.items()}
         # res = model.generate(**inputs, max_length=args.max_length, eos_token_id=tokenizer.eos_token_id, max_new_tokens=128)
-        res = model.generate(**inputs, eos_token_id=tokenizer.eos_token_id, max_new_tokens=128)
+        res = model.generate(**inputs, eos_token_id=tokenizer.eos_token_id, max_new_tokens=128, pad_token_id=tokenizer.pad_token_id)
         res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
-        if (idx + 1) % log_interval == 0:
+        if (idx + 1) % log_interval == 0 and not silent:
             tqdm.write(f'{idx}: {res_sentences[0]}')
         out_text = [o.split("Answer: ")[1] for o in res_sentences]
         out_text_list += out_text
-        torch.cuda.empty_cache()
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        elif torch.cuda.is_available():
+            torch.cuda.empty_cache()
     
     dataset = dataset.add_column("out_text", out_text_list)
     dataset = dataset.map(map_output, load_from_cache_file=False)    
     dataset = dataset.to_pandas()
     
-    print(dataset)
+    if not silent:
+        print(dataset)
     dataset.to_csv('tmp.csv')
     
     label = [[tuple(t) for t in d.tolist()] for d in dataset['label']]
@@ -142,9 +144,12 @@ def test_re(args, model, tokenizer):
     
     label_re = [[t[0] for t in d.tolist()] for d in dataset['label']]
     pred_re = [[t[0] for t in d.tolist()] for d in dataset['pred']]
-    
+    print()
+    print("*"*10)
+    print("FINRED")
     calc_metric(label, pred)
-    
+    print("*"*10)
     calc_metric(label_re, pred_re)
-
+    print("*"*10)
+    print()
     return dataset

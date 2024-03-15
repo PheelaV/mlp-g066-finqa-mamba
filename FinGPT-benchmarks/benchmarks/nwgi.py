@@ -33,7 +33,7 @@ def change_target(x):
     else:
         return 'neutral'
 
-def test_nwgi(args, model, tokenizer, prompt_fun=None):
+def test_nwgi(args, model, tokenizer, prompt_fun=None, silent=True):
     batch_size = args.batch_size
     # dataset = load_dataset('oliverwang15/news_with_gpt_instructions')
     dataset = load_from_disk('../data/news_with_gpt_instructions/')
@@ -51,12 +51,14 @@ def test_nwgi(args, model, tokenizer, prompt_fun=None):
     dataset[["context","target"]] = dataset.apply(format_example, axis = 1, result_type="expand")
 
     # print example
-    print(f"\n\nPrompt example:\n{dataset['context'][0]}\n\n")
+    if not silent:
+        print(f"\n\nPrompt example:\n{dataset['context'][0]}\n\n")
 
     context = dataset['context'].tolist()
     
     total_steps = dataset.shape[0]//batch_size + 1
-    print(f"Total len: {len(context)}. Batchsize: {batch_size}. Total steps: {total_steps}")
+    if not silent:
+        print(f"Total len: {len(context)}. Batchsize: {batch_size}. Total steps: {total_steps}")
 
 
     out_text_list = []
@@ -65,12 +67,15 @@ def test_nwgi(args, model, tokenizer, prompt_fun=None):
         tokens = tokenizer(tmp_context, return_tensors='pt', padding=True, max_length=512, return_token_type_ids=False)
         # tokens.pop('token_type_ids')
         for k in tokens.keys():
-            tokens[k] = tokens[k].cuda()
+            tokens[k] = tokens[k].to(model.device)
         res = model.generate(**tokens, max_length=512, eos_token_id=tokenizer.eos_token_id)
         res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
         out_text = [o.split("Answer: ")[1] for o in res_sentences]
         out_text_list += out_text
-        torch.cuda.empty_cache()
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        elif torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     dataset["out_text"] = out_text_list
     dataset["new_target"] = dataset["target"].apply(change_target)
@@ -81,6 +86,13 @@ def test_nwgi(args, model, tokenizer, prompt_fun=None):
     f1_micro = f1_score(dataset["new_target"], dataset["new_out"], average = "micro")
     f1_weighted = f1_score(dataset["new_target"], dataset["new_out"], average = "weighted")
 
+    print()
+    print("*"*10)
+    print("FINEVAL")
+    print("*"*10)
     print(f"Acc: {acc}. F1 macro: {f1_macro}. F1 micro: {f1_micro}. F1 weighted (BloombergGPT): {f1_weighted}. ")
+    print("*"*10)
+    print()
+
 
     return dataset

@@ -177,7 +177,10 @@ def main(args):
 
     # Clear CUDA cache and start training
     if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        elif torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     import wandb
 

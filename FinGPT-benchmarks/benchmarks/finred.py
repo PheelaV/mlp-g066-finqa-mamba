@@ -1,6 +1,7 @@
 from seqeval.metrics import classification_report
 from datasets import load_dataset, load_from_disk, Dataset, DatasetDict
 from tqdm import tqdm
+from log_dtos import ClsMetrics
 import datasets
 from typing import Tuple
 import torch

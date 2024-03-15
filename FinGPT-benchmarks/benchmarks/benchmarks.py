@@ -2,6 +2,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 import argparse
 
+import wandb
+from log_dtos import ClsMetrics
 
 from fpb import test_fpb, test_fpb_mlt
 from fiqa import test_fiqa, test_fiqa_mlt 
@@ -79,34 +81,64 @@ def main(args):
     with torch.no_grad():
         for data in args.dataset.split(','):
             if data == 'fpb':
-                test_fpb(args, model, tokenizer)
+                _, metrics = test_fpb(args, model, tokenizer)
+                log_cls_metrics(metrics, data)
             elif data == 'fpb_mlt':
-                test_fpb_mlt(args, model, tokenizer)
+                _, template_metrics = test_fpb_mlt(args, model, tokenizer)
+                for i, metrics in enumerate(template_metrics):
+                    log_cls_metrics(metrics, data, i)
             elif data == 'fiqa':
-                test_fiqa(args, model, tokenizer)
+                _, metrics = test_fiqa(args, model, tokenizer)
+                log_cls_metrics(metrics, data)
             elif data == 'fiqa_mlt':
-                test_fiqa_mlt(args, model, tokenizer)
+                _, template_metrics = test_fiqa_mlt(args, model, tokenizer)
+                for i, metrics in enumerate():
+                    log_cls_metrics(metrics, data, i)
             elif data == 'tfns':
-                test_tfns(args, model, tokenizer)
+                _, metrics = test_tfns(args, model, tokenizer)
+                log_cls_metrics(metrics, data)
             elif data == 'nwgi':
-                test_nwgi(args, model, tokenizer)
+                _, metrics = test_nwgi(args, model, tokenizer)
+                log_cls_metrics(metrics, data)
+            elif data == 'convfinqa':
+                _, acc = test_convfinqa(args, model, tokenizer)
+                wandb.summary[f"{data}_acc"] = acc 
+            elif data == 'fineval':
+                _, acc = test_fineval(args, model, tokenizer)
+                wandb.summary[f"{data}_acc"] = acc 
+            elif data == 're':
+                metrics = test_re(args, model, tokenizer)
+                log_what_is_this(metrics, data)
+            # These two need to be looked at if we are to use them...
             elif data == 'headline':
                 test_headline(args, model, tokenizer)
             elif data == 'ner':
                 test_ner(args, model, tokenizer)
-            elif data == 'convfinqa':
-                test_convfinqa(args, model, tokenizer)
-            elif data == 'fineval':
-                test_fineval(args, model, tokenizer)
-            elif data == 're':
-                test_re(args, model, tokenizer)
             else:
                 raise ValueError('undefined dataset.')
     
     print('Evaluation Ends.')
         
 
+def log_cls_metrics(metrics: ClsMetrics, data, index=None):
+    # I don't know how to log multiple metrics per dataset so I invendted the index
+    # so that we may deterministically find what belongs to what later if we do need it...
+    (acc, f1_macro, f1_micro, f1_weighted) = metrics
+    postfix = f"_{index}" if index is not None else ""
+    wandb.summary[f"{data}_acc" + postfix] = acc 
+    wandb.summary[f"{data}_f1_macro" + postfix] = f1_macro
+    wandb.summary[f"{data}_f1_micro" + postfix] = f1_micro
+    wandb.summary[f"{data}_f1_weighted" + postfix] = f1_weighted
 
+def log_what_is_this(metrics, data):
+    (precision, recall, f1_score, precision_re, recall_re, f1_score_re) = metrics
+    wandb.summary[f"{data}_precision"] = precision
+    wandb.summary[f"{data}_recall"] = recall
+    wandb.summary[f"{data}_f1_score"] = f1_score
+    wandb.summary[f"{data}_precision_re"] = precision_re
+    wandb.summary[f"{data}_recall_re"] = recall_re
+    wandb.summary[f"{data}_f1_score_re"] = f1_score_re
+        
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()

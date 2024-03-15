@@ -1,8 +1,11 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+from log_dtos import ClsMetrics
+from typing import Tuple
+
 from sklearn.metrics import accuracy_score,f1_score
-from datasets import load_dataset, load_from_disk
+from datasets import load_dataset, load_from_disk, Dataset, DatasetDict
 from tqdm import tqdm
 import datasets
 import torch
@@ -29,7 +32,7 @@ def change_target(x):
     else:
         return 'neutral'
 
-def test_tfns(args, model, tokenizer, prompt_fun=None, silent=True):
+def test_tfns(args, model, tokenizer, prompt_fun=None, silent=True) -> Tuple[Dataset | DatasetDict, ClsMetrics]:
     # print what test is being done
     print("Testing on Twitter Financial News Sentiment dataset")
 
@@ -66,7 +69,7 @@ def test_tfns(args, model, tokenizer, prompt_fun=None, silent=True):
         # tokens.pop('token_type_ids')
         for k in tokens.keys():
             tokens[k] = tokens[k].to(model.device)
-        res = model.generate(**tokens, max_length=512, eos_token_id=tokenizer.eos_token_id)
+        res = model.generate(**tokens, max_length=512, eos_token_id=tokenizer.eos_token_id, pad_token_id=tokenizer.pad_token_id)
         res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
         out_text = [o.split("Answer: ")[1] for o in res_sentences]
         out_text_list += out_text
@@ -92,4 +95,4 @@ def test_tfns(args, model, tokenizer, prompt_fun=None, silent=True):
     print("*"*10)
     print()
 
-    return dataset
+    return dataset, ClsMetrics(acc, f1_macro, f1_micro, f1_weighted)

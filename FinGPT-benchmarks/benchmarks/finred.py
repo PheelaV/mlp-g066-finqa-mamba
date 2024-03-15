@@ -94,11 +94,10 @@ def calc_metric(gt_list, pred_list):
     recall = true_positives / (true_positives + false_negatives)
     f1_score = 2 * (precision * recall) / (precision + recall)
 
-    # Print the results
-    print(f"Precisions: {precision}, Recalls: {recall}, F1-Scores: {f1_score}")
+    return precision, recall, f1_score
     
 
-def test_re(args, model, tokenizer, silent=True):
+def test_re(args, model, tokenizer, silent=True) -> Tuple[Dataset | DatasetDict, ClsMetrics]:
 
     dataset = load_from_disk('../data/fingpt-finred-re')['test']#.select(range(50))
     dataset = dataset.train_test_split(0.2, seed=42)['test']
@@ -141,15 +140,19 @@ def test_re(args, model, tokenizer, silent=True):
     
     label = [[tuple(t) for t in d.tolist()] for d in dataset['label']]
     pred = [[tuple(t) for t in d.tolist()] for d in dataset['pred']]
+    precision, recall, f1_score =  calc_metric(label, pred)
     
     label_re = [[t[0] for t in d.tolist()] for d in dataset['label']]
     pred_re = [[t[0] for t in d.tolist()] for d in dataset['pred']]
+    precision_re, recall_re, f1_score_re =  calc_metric(label_re, pred_re)
     print()
     print("*"*10)
     print("FINRED")
-    calc_metric(label, pred)
+    print(f"Precisions: {precision}, Recalls: {recall}, F1-Scores: {f1_score}")
+
     print("*"*10)
-    calc_metric(label_re, pred_re)
+    print(f"RE? Precisions: {precision_re}, Recalls: {recall_re}, F1-Scores: {f1_score_re}")
     print("*"*10)
     print()
-    return dataset
+    
+    return dataset, (precision, recall, f1_score, precision_re, recall_re, f1_score_re)

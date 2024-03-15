@@ -2,13 +2,14 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from sklearn.metrics import accuracy_score,f1_score
-from datasets import load_dataset, load_from_disk, Dataset
+from datasets import load_dataset, load_from_disk, Dataset, DatasetDict
 from tqdm import tqdm
 import datasets
 import torch
-
+from log_dtos import ClsMetrics
 from torch.utils.data import DataLoader
 from functools import partial
+from typing import Tuple, List
 
 dic = {
         0:"negative",
@@ -49,7 +50,7 @@ def vote_output(x):
     else:
         return 'neutral'
     
-def test_fpb(args, model, tokenizer, prompt_fun=None, silent=True):
+def test_fpb(args, model, tokenizer, prompt_fun=None, silent=True) -> Tuple[Dataset | DatasetDict, ClsMetrics]:
     # print what test is being done
     print("Testing on Financial Phrasebank dataset")
 
@@ -111,10 +112,10 @@ def test_fpb(args, model, tokenizer, prompt_fun=None, silent=True):
     print("*"*10)
     print()
 
-    return instructions
+    return instructions, ClsMetrics(acc, f1_macro, f1_micro, f1_weighted)
 
 
-def test_fpb_mlt(args, model, tokenizer, silent=True):
+def test_fpb_mlt(args, model, tokenizer, silent=True) -> Tuple[Dataset | DatasetDict, List[ClsMetrics]]:
     print("Running test_fpb_mlt")
     batch_size = args.batch_size
     # instructions = load_dataset("financial_phrasebank", "sentences_50agree")
@@ -175,15 +176,19 @@ def test_fpb_mlt(args, model, tokenizer, silent=True):
     print("*"*10)
     print("FPB")
     print("*"*10)
+    
+    metrics = []
     for k in [f"out_text_{i}" for i in range(len(templates))] + ["new_out"]:
 
         acc = accuracy_score(dataset["target"], dataset[k])
         f1_macro = f1_score(dataset["target"], dataset[k], average="macro")
         f1_micro = f1_score(dataset["target"], dataset[k], average="micro")
         f1_weighted = f1_score(dataset["target"], dataset[k], average="weighted")
+        
         print(f"Acc: {acc}. F1 macro: {f1_macro}. F1 micro: {f1_micro}. F1 weighted (BloombergGPT): {f1_weighted}. ")
         print("*"*10)
+        metrics.append(ClsMetrics(acc, f1_macro, f1_micro, f1_weighted))
     
     print()
 
-    return dataset
+    return dataset, metrics

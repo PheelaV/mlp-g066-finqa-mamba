@@ -1,7 +1,8 @@
 from seqeval.metrics import accuracy_score
-from datasets import load_dataset, load_from_disk
+from datasets import load_dataset, load_from_disk, Dataset, DatasetDict
 from tqdm import tqdm
 import datasets
+from typing import Tuple
 import torch
 from torch.utils.data import DataLoader
 from functools import partial
@@ -31,7 +32,7 @@ def map_output(feature):
     return {"label": label, "pred": pred}
 
 
-def test_fineval(args, model, tokenizer, silent=True):
+def test_fineval(args, model, tokenizer, silent=True) -> Tuple[Dataset | DatasetDict, float]:
 
     dataset = load_from_disk("../data/fingpt-fineval")["test"]#.select(range(30))
     dataset = dataset.map(partial(test_mapping, args), load_from_cache_file=False)
@@ -69,11 +70,11 @@ def test_fineval(args, model, tokenizer, silent=True):
     if not silent:
         print(dataset)
     dataset.to_csv("tmp.csv")
-    
+    acc = accuracy_score(dataset['label'], dataset['pred'])
     print()
     print("*"*10)
     print("FINEVAL")
-    print(f"Accuracy: {accuracy_score(dataset['label'])} {dataset['pred']}")
+    print(f"Accuracy: {acc}")
     print("*"*10)
     print()
-    return dataset
+    return dataset, acc

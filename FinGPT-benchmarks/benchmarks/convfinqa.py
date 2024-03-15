@@ -1,5 +1,6 @@
 from seqeval.metrics import accuracy_score
-from datasets import load_dataset, load_from_disk
+from datasets import load_dataset, load_from_disk, Dataset, DatasetDict
+from typing import Tuple
 from tqdm import tqdm
 import datasets
 import torch
@@ -32,7 +33,7 @@ def map_output(feature):
     return {'label': label, 'pred': pred}
 
 
-def test_convfinqa(args, model, tokenizer, silent=True):
+def test_convfinqa(args, model, tokenizer, silent=True) -> Tuple[Dataset | DatasetDict, float]:
 
     dataset = load_from_disk('../data/fingpt-convfinqa')['test']#.select(range(30))
     dataset = dataset.map(partial(test_mapping, args), load_from_cache_file=False)
@@ -74,11 +75,12 @@ def test_convfinqa(args, model, tokenizer, silent=True):
     
     label = [float(d) for d in dataset['label']]
     pred = [float(d) for d in dataset['pred']]
+    acc = accuracy_score(label, pred)
     print()
     print("*"*10)
     print("convfinqa")
     print("*"*10)
-    print('Accuracy: ', accuracy_score(label, pred))
+    print('Accuracy: ', acc)
     print("*"*10)
     print()
-    return dataset
+    return dataset, acc

@@ -2,7 +2,9 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from sklearn.metrics import accuracy_score,f1_score
-from datasets import load_dataset, load_from_disk, Dataset
+from datasets import load_dataset, load_from_disk, Dataset, DatasetDict
+from log_dtos import ClsMetrics
+from typing import Tuple, List
 from tqdm import tqdm
 import datasets
 import torch
@@ -55,7 +57,7 @@ def vote_output(x):
         return 'neutral'
     
 
-def test_fiqa(args, model, tokenizer, prompt_fun=add_instructions, silent=True):
+def test_fiqa(args, model, tokenizer, prompt_fun=add_instructions, silent=True) -> Tuple[Dataset | DatasetDict, ClsMetrics]:
     # print what test is being done
     print("Testing on FIQA-2018 dataset")
 
@@ -120,10 +122,10 @@ def test_fiqa(args, model, tokenizer, prompt_fun=add_instructions, silent=True):
     print("*"*10)
     print()
 
-    return dataset
+    return dataset, ClsMetrics(acc, f1_macro, f1_micro, f1_weighted)
 
 
-def test_fiqa_mlt(args, model, tokenizer):
+def test_fiqa_mlt(args, model, tokenizer) -> Tuple[Dataset | DatasetDict, List[ClsMetrics]]:
     batch_size = args.batch_size
     # dataset = load_dataset('pauri32/fiqa-2018')
     dataset = load_from_disk('../data/fiqa-2018/')
@@ -184,6 +186,7 @@ def test_fiqa_mlt(args, model, tokenizer):
     print("*"*10)
     print("FIQA")
     print("*"*10)
+    metrics = []
     for k in [f"out_text_{i}" for i in range(len(templates))] + ["new_out"]:
         acc = accuracy_score(dataset["target"], dataset[k])
         f1_macro = f1_score(dataset["target"], dataset[k], average="macro")
@@ -192,7 +195,8 @@ def test_fiqa_mlt(args, model, tokenizer):
 
         print(f"Acc: {acc}. F1 macro: {f1_macro}. F1 micro: {f1_micro}. F1 weighted (BloombergGPT): {f1_weighted}. ")
         print("*"*10)
+        metrics.append(ClsMetrics(acc, f1_macro, f1_micro, f1_weighted))
     
     print()
 
-    return dataset
+    return dataset, metrics

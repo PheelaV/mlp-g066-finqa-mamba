@@ -65,7 +65,7 @@ def main(args):
 
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        trust_remote_code=True,
+        trust_remote_code= True if not args.force_use_model else None,
         # load_in_8bit=True
         device_map="auto",
         # fp16=True

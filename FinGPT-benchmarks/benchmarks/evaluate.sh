@@ -15,7 +15,14 @@ python benchmarks.py \
 --dataset fpb,fiqa,tfns,nwgi \
 --force_use_model \
 --batch_size 16 \
---max_length 515 \
+--max_length 512 \
+--base_model ../../training/finetuned_models/pythia_m_mt_0_2024_03_15_0539/checkpoint-12342
+
+python benchmarks.py \
+--dataset fpb,fiqa,tfns,nwgi \
+--force_use_model \
+--batch_size 16 \
+--max_length 512 \
 --base_model ../../training/finetuned_models/mamba-small_mamba_s_mt_0_2024_03_14_0457/checkpoint-28469
 
 python benchmarks.py \

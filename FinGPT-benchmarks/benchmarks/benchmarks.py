@@ -34,20 +34,29 @@ def get_tokenizer(args, model_name):
 
 
 def main(args):
+    
+    # TODO needs a look at
+    run_id = args.base_model
+    if args.peft_model:
+        run_id += f"_peft_{args.peft_model.replace("/", '_')}"
     if args.logging:
         import wandb
 
         config = {}
         config.update(vars(args))
         wandb.init(
-            project="mlp-g066-mamba",
-            name=args.run_name,
+            project="mlp-g066-benchmarks",
+            name=args.run_name if args.run_name is not None else run_id,
             config=config,
             dir=args.working_dir,
-            group=args.run_name,
+            group=args.run_name if args.run_name is not None else run_id,
         )
+        
+    print(f"Running for {run_id}...")
 
-    if args.from_remote:
+    if args.force_use_model:
+        model_name = args.base_model
+    elif args.from_remote:
         model_name = parse_model_name(args.base_model, args.from_remote)
     else:
         model_name = "../" + parse_model_name(args.base_model)
@@ -217,15 +226,12 @@ if __name__ == "__main__":
         "--from_remote", action=argparse.BooleanOptionalAction, default=False
     )
     parser.add_argument(
-        "--force_use",
+        "--force_use_model",
         action=argparse.BooleanOptionalAction,
         default=False,
         help="Force use of the model, this is a temporary measure...",
     )
 
     args = parser.parse_args()
-
-    print(args.base_model)
-    # print(args.peft_model)
 
     main(args)

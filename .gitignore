@@ -172,3 +172,5 @@ pyrightconfig.json
 FinGPT-benchmarks/data/*
 !FinGPT-benchmarks/data/*.ipynb
 !FinGPT-benchmarks/data/*.py
+
+FinGPT-benchmarks/benchmarks/FinNLP

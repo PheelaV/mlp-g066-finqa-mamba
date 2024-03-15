@@ -146,7 +146,7 @@ def main(args):
 
 
 def log_cls_metrics(args, data, metrics: ClsMetrics, index=None):
-    if not args.logging:
+    if args.logging:
         return
     # I don't know how to log multiple metrics per dataset so I invendted the index
     # so that we may deterministically find what belongs to what later if we do need it...
@@ -158,8 +158,8 @@ def log_cls_metrics(args, data, metrics: ClsMetrics, index=None):
     wandb.summary[f"{data}_f1_weighted" + postfix] = f1_weighted
 
 
-def log_what_is_this(metrics, data):
-    if not args.logging:
+def log_what_is_this(args, metrics, data):
+    if args.logging:
         return
     (precision, recall, f1_score, precision_re, recall_re, f1_score_re) = metrics
     wandb.summary[f"{data}_precision"] = precision

@@ -74,7 +74,7 @@ def test_nwgi(args, model, tokenizer, prompt_fun=None, silent=True) -> Tuple[Dat
         # tokens.pop('token_type_ids')
         for k in tokens.keys():
             tokens[k] = tokens[k].to(model.device)
-        res = model.generate(**tokens, max_length=512, eos_token_id=tokenizer.eos_token_id, padding_token_id=tokenizer.pad_token_id)
+        res = model.generate(**tokens, max_length=512, eos_token_id=tokenizer.eos_token_id, pad_token_id=tokenizer.pad_token_id)
         res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
         # So this is problematic, but better than the original alternative:
         # `out_text = [o.split("Answer: ")[1] if "Answer: " in o else "" for o in res_sentences]``

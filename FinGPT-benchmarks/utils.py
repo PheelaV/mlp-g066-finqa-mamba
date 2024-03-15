@@ -154,7 +154,11 @@ def parse_model_name(name, from_remote=False):
         'baichuan': ('baichuan-inc/Baichuan2-7B-Base', 'base_models/Baichuan2-7B-Base'),
         'mpt': ('cekal/mpt-7b-peft-compatible', 'base_models/mpt-7b-peft-compatible'),
         'bloom': ('bigscience/bloom-7b1', 'base_models/bloom-7b1'),
-        'pythia': ('EleutherAI/pythia-14m', 'base_models/pythia-14m')
+        'pythia': ('EleutherAI/pythia-14m', 'base_models/pythia-14m'),
+        # for testing
+        'pythia-ms': ('EleutherAI/pythia-160m', 'base_models/pythia-160m'),
+        'pythia-m': ('EleutherAI/pythia-1.4b', 'base_models/pythia-1.4b'),
+        'pythia-ml': ('EleutherAI/pythia-2.8b', 'base_models/pythia-2.8b'),
     }
 
     if name in model_paths:

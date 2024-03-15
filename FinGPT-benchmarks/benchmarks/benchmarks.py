@@ -38,7 +38,7 @@ def main(args):
     # TODO needs a look at
     run_id = args.base_model
     if args.peft_model:
-        run_id += f"_peft_{args.peft_model.replace("/", '_')}"
+        run_id += f"_peft_{args.peft_model.replace('/', '_')}"
     if args.logging:
         import wandb
 

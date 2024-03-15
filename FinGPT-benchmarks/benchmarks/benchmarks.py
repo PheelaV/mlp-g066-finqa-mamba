@@ -34,10 +34,9 @@ def get_tokenizer(args, model_name):
 
 
 def main(args):
-    
     if args.logging:
         import wandb
-        
+
         config = {}
         config.update(vars(args))
         wandb.init(
@@ -167,7 +166,21 @@ if __name__ == "__main__":
         "--base_model",
         required=True,
         type=str,
-        choices=[
+        # choices=[
+        #     "chatglm2",
+        #     "llama2",
+        #     "llama2-13b",
+        #     "llama2-13b-nr",
+        #     "baichuan",
+        #     "falcon",
+        #     "internlm",
+        #     "qwen",
+        #     "mpt",
+        #     "bloom",
+        #     "pythia",
+        #     ""
+        # ],
+        help=", ".join([
             "chatglm2",
             "llama2",
             "llama2-13b",
@@ -179,7 +192,7 @@ if __name__ == "__main__":
             "mpt",
             "bloom",
             "pythia",
-        ],
+        ]),
     )
     parser.add_argument("--peft_model", required=False, type=str)
     parser.add_argument("--max_length", default=512, type=int)
@@ -200,7 +213,15 @@ if __name__ == "__main__":
         "--batch_size", default=4, type=int, help="The train batch size per device"
     )
     parser.add_argument("--instruct_template", default="default")
-    parser.add_argument("--from_remote", default=False, type=bool)
+    parser.add_argument(
+        "--from_remote", action=argparse.BooleanOptionalAction, default=False
+    )
+    parser.add_argument(
+        "--force_use",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Force use of the model, this is a temporary measure...",
+    )
 
     args = parser.parse_args()
 

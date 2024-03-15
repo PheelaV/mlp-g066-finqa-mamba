@@ -107,24 +107,24 @@ def main(args):
         for data in args.dataset.split(","):
             if data == "fpb":
                 _, metrics = test_fpb(args, model, tokenizer)
-                log_cls_metrics(metrics, data)
+                log_cls_metrics(args, data, metrics)
             elif data == "fpb_mlt":
                 _, template_metrics = test_fpb_mlt(args, model, tokenizer)
                 for i, metrics in enumerate(template_metrics):
                     log_cls_metrics(metrics, data, i)
             elif data == "fiqa":
                 _, metrics = test_fiqa(args, model, tokenizer)
-                log_cls_metrics(metrics, data)
+                log_cls_metrics(args, data, metrics)
             elif data == "fiqa_mlt":
                 _, template_metrics = test_fiqa_mlt(args, model, tokenizer)
                 for i, metrics in enumerate():
-                    log_cls_metrics(metrics, data, i)
+                    log_cls_metrics(args, data, metrics, i)
             elif data == "tfns":
                 _, metrics = test_tfns(args, model, tokenizer)
-                log_cls_metrics(metrics, data)
+                log_cls_metrics(args, data, metrics)
             elif data == "nwgi":
                 _, metrics = test_nwgi(args, model, tokenizer)
-                log_cls_metrics(metrics, data)
+                log_cls_metrics(args, data, metrics)
             elif data == "convfinqa":
                 _, acc = test_convfinqa(args, model, tokenizer)
                 wandb.summary[f"{data}_acc"] = acc
@@ -133,7 +133,7 @@ def main(args):
                 wandb.summary[f"{data}_acc"] = acc
             elif data == "re":
                 metrics = test_re(args, model, tokenizer)
-                log_what_is_this(metrics, data)
+                log_what_is_this(args, data, metrics)
             # These two need to be looked at if we are to use them...
             elif data == "headline":
                 test_headline(args, model, tokenizer)

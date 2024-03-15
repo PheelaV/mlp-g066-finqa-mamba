@@ -11,33 +11,42 @@
 # --max_length 128 \
 # --from_remote # --no--logging \
 
-python benchmarks.py \
---dataset fpb,fiqa,tfns,nwgi \
---force_use_model \
---batch_size 16 \
---max_length 512 \
---base_model ../../training/finetuned_models/pythia_m_mt_0_2024_03_15_0539/checkpoint-12342
+# python benchmarks.py \
+# --dataset fpb,fiqa,tfns,nwgi \
+# --force_use_model \
+# --batch_size 16 \
+# --max_length 512 \
+# --base_model ../../training/finetuned_models/pythia_m_mt_0_2024_03_15_0539/checkpoint-12342
 
 python benchmarks.py \
 --dataset fpb,fiqa,tfns,nwgi \
 --force_use_model \
 --batch_size 16 \
 --max_length 512 \
---base_model ../../training/finetuned_models/mamba-small_mamba_s_mt_0_2024_03_14_0457/checkpoint-28469
+--base_model ../../training/finetuned_models/pythia-medsmall_pythia_ms_mt_2_2024_03_14_1601/checkpoint-28469
 
-python benchmarks.py \
---dataset fpb,fiqa,tfns,nwgi \
---force_use_model \
---batch_size 16 \
---max_length 512 \
---base_model ../../training/finetuned_models/mamba-small_mamba_s_mt_1_2024_03_14_0457/checkpoint-28469
+# python benchmarks.py \
+# --dataset fpb,fiqa,tfns,nwgi \
+# --force_use_model \
+# --batch_size 16 \
+# --max_length 512 \
+# --base_model ../../training/finetuned_models/mamba-small_mamba_s_mt_0_2024_03_14_0457/checkpoint-28469
 
-python benchmarks.py \
---dataset fpb,fiqa,tfns,nwgi \
---force_use_model \
---batch_size 16 \
---max_length 512 \
---base_model ../../training/finetuned_models/mamba-small_mamba_s_mt_2_2024_03_14_0943/checkpoint-28469
+# python benchmarks.py \
+# --dataset fpb,fiqa,tfns,nwgi \
+# --force_use_model \
+# --batch_size 16 \
+# --max_length 512 \
+# --base_model ../../training/finetuned_models/mamba-small_mamba_s_mt_1_2024_03_14_0457/checkpoint-28469
+
+# python benchmarks.py \
+# --dataset fpb,fiqa,tfns,nwgi \
+# --force_use_model \
+# --batch_size 16 \
+# --max_length 512 \
+# --base_model ../../training/finetuned_models/mamba-small_mamba_s_mt_2_2024_03_14_0943/checkpoint-28469
+
+## FIN GPT
 #---- Relation Extraction ----
 
 # python benchmarks.py \

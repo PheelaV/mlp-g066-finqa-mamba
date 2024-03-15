@@ -74,8 +74,8 @@ def test_headline(args, model, tokenizer, silent=True):
                     # then
                     out_text_list.append(out_text[1])
                     continue
-                # otherwise in any case
-                out_text_list.append("")
+            # otherwise in any case
+            out_text_list.append("")
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
         elif torch.cuda.is_available():

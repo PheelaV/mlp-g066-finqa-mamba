@@ -109,8 +109,8 @@ def test_fpb(args, model, tokenizer, prompt_fun=None, silent=True) -> Tuple[Data
                     # then
                     out_text_list.append(out_text[1])
                     continue
-                # otherwise in any case
-                out_text_list.append("")
+            # otherwise in any case
+            out_text_list.append("")
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
         elif torch.cuda.is_available():
@@ -194,8 +194,8 @@ def test_fpb_mlt(args, model, tokenizer, silent=True) -> Tuple[Dataset | Dataset
                         # then
                         out_texts_list[i].append(out_text[1])
                         continue
-                    # otherwise in any case
-                    out_texts_list[i].append("")
+                # otherwise in any case
+                out_texts_list[i].append("")
             if torch.backends.mps.is_available():
                 torch.mps.empty_cache()
             elif torch.cuda.is_available():

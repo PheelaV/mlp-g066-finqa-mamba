@@ -74,8 +74,8 @@ def test_convfinqa(args, model, tokenizer, silent=True) -> Tuple[Dataset | Datas
                     # then
                     out_text_list.append(out_text[1])
                     continue
-                # otherwise in any case
-                out_text_list.append("")
+            # otherwise in any case
+            out_text_list.append("")
                 
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()

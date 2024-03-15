@@ -116,8 +116,8 @@ def test_fiqa(args, model, tokenizer, prompt_fun=add_instructions, silent=True) 
                     # then
                     out_text_list.append(out_text[1])
                     continue
-                # otherwise in any case
-                out_text_list.append("")
+            # otherwise in any case
+            out_text_list.append("")
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
         elif torch.cuda.is_available():
@@ -202,8 +202,8 @@ def test_fiqa_mlt(args, model, tokenizer, silent=True) -> Tuple[Dataset | Datase
                         # then
                         out_texts_list[i].append(out_text[1])
                         continue
-                    # otherwise in any case
-                    out_texts_list[i].append("")
+                # otherwise in any case
+                out_texts_list[i].append("")
 
             if torch.backends.mps.is_available():
                 torch.mps.empty_cache()

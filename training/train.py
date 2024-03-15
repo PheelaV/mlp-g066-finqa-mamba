@@ -219,6 +219,7 @@ def main(args):
             args.working_dir if args.shared_dir is None else args.shared_dir,
             "finetuned_models",
             finetuned_model_run_name,
+            "final-best",
         )
     )
 

@@ -1,7 +1,7 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 import argparse
-
+import os
 from log_dtos import ClsMetrics
 
 from fpb import test_fpb, test_fpb_mlt
@@ -48,9 +48,11 @@ def main(args):
             project="mlp-g066-benchmarks",
             name=args.run_name if args.run_name is not None else run_id,
             config=config,
-            dir=args.working_dir,
+            # dir=args.working_dir,
             group=args.run_name if args.run_name is not None else run_id,
         )
+    else:
+         os.environ['WANDB_DISABLED'] = 'true'
         
     print(f"Running for {run_id}...")
 
@@ -204,6 +206,7 @@ if __name__ == "__main__":
         ]),
     )
     parser.add_argument("--peft_model", required=False, type=str)
+    parser.add_argument("--run_name", default=None, type=str) 
     parser.add_argument("--max_length", default=512, type=int)
     parser.add_argument(
         "--lora",

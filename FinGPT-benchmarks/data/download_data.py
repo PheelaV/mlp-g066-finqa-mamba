@@ -2,8 +2,14 @@ import os
 import shutil
 from datasets import load_dataset
 
+import pathlib
 # delete data if it exists
-file_paths = ['twitter-financial-news-sentiment', 'news_with_gpt_instructions', 'financial_phrasebank-sentences_50agree', 'fiqa-2018']
+
+# just so we can execute this from any directory
+local_file_folder = pathlib.Path(__file__).parent.absolute()
+
+file_paths = [os.path.join(local_file_folder, path) for path in ('twitter-financial-news-sentiment', 'news_with_gpt_instructions', 'financial_phrasebank-sentences_50agree', 'fiqa-2018')]
+
 
 for file_path in file_paths:
     if os.path.exists(file_path):

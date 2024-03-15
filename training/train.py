@@ -99,12 +99,11 @@ def load_config(json_filepath):
 
 
 def main(args):
-    
     if args.distributed:
         accelerator = Accelerator(log_with="wandb")
         args.local_rank = accelerator.device.index
         args.num_processes = accelerator.num_processes
-        
+
     # device = (
     #     torch.device("cuda")
     #     if torch.cuda.is_available()
@@ -146,7 +145,7 @@ def main(args):
 
     if args.seed_data:
         exit()
-    
+
     if "mamba" in args.base_model:
         model = AutoModelForCausalLM.from_pretrained(model_name)
         # https://github.com/huggingface/transformers/issues/29505
@@ -170,7 +169,6 @@ def main(args):
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     tokenizer = utils.get_tokenizer(args, model_name)
 
-   
     trainer, training_args, common_args = utils.get_trainer(
         args, model, tokenizer, dataset, formatted_time
     )
@@ -186,36 +184,43 @@ def main(args):
 
     if args.distributed and args.local_rank == 0:
         accelerator.init_trackers(
-            project_name="mlp-g066-mamba",
+            project_name="mlp-g066",
             config=common_args,
             init_kwargs={
                 "dir": args.working_dir,
                 "group": args.run_name,
-            }
-        ) 
+            },
+        )
         accelerator.trackers[0].run.name = args.run_name
     elif not args.distributed:
         wandb.init(
-            project="mlp-g066-mamba",
+            project="mlp-g066",
             name=args.run_name,
             config=common_args,
             dir=args.working_dir,
-            group=args.run_name
+            group=args.run_name,
         )
 
     if args.local_rank == 0:
         start_time = datetime.now()
         print(f"Start Time: {start_time.isoformat()}")
-        wandb.log({"start_time":start_time})
-        
+        wandb.log({"start_time": start_time})
+
     trainer.train()
-    
+
     if args.local_rank == 0:
         end_time = datetime.now()
-        wandb.log({"end_time":end_time})
+        wandb.log({"end_time": end_time})
         print(f"End Time: {end_time.isoformat()}")
     # Save the fine-tuned model
-    trainer.save_model(os.path.join(args.working_dir, "finetuned_models", args.base_model))
+    finetuned_model_run_name = f"{args.base_model}_{args.run_name}_{formatted_time}"
+    trainer.save_model(
+        os.path.join(
+            args.working_dir if args.shared_dir is None else args.shared_dir,
+            "finetuned_models",
+            finetuned_model_run_name,
+        )
+    )
 
 
 # In[4]:
@@ -233,10 +238,16 @@ if __name__ == "__main__":
         help="Optional path to JSON configuration file",
     )
     parser.add_argument(
-        "--local_rank", default=0, type=int, help="Local rank for distributed training, set internally"
+        "--local_rank",
+        default=0,
+        type=int,
+        help="Local rank for distributed training, set internally",
     )
     parser.add_argument(
-        "--num_processes", default=1, type=int, help="Number of processes for distributed training, set internally"
+        "--num_processes",
+        default=1,
+        type=int,
+        help="Number of processes for distributed training, set internally",
     )
     parser.add_argument(
         "--lora_r", default=0, type=int, help="Lora rank, 0 for no lora"
@@ -262,13 +273,13 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", default=8, type=int, help="The training epochs")
     parser.add_argument(
         "--gradient_steps",
-        default=8,
+        default=1,
         type=float,
         help="The gradient accumulation steps",
     )
     parser.add_argument(
         "--num_workers",
-        default="8",
+        default="all",
         type=str,
         help="Dataloader workers - number or 'all' to use all available cores",
     )
@@ -290,10 +301,23 @@ if __name__ == "__main__":
         "--working_dir",
         default="./",
         type=str,
-        help="Location where the model and logs will be saved as well as datasets read from.",
+        help="Saving logs as well as saving and retrieving models, datasets, modle checkpointing",
+    )
+    # some clusters need scratch disks which are not shared across nodes so that gives a rise for
+    # the need to read data from a shared location, then save the model to that shared location,
+    # but checkpoint to a different location
+    # I am resolving this by giving the option to save the model to a different location as well as
+    # read the data from a different location
+    parser.add_argument(
+        "--shared_dir",
+        default=None,
+        type=str,
+        help="Overwrite location from which the model or data gets saved or read from locally",
     )
     parser.add_argument("--instruct_template", default="default")
-    parser.add_argument("--load_best_model", default="False", type=bool)
+    parser.add_argument(
+        "--load_best_model", default=True, action=argparse.BooleanOptionalAction
+    )
     parser.add_argument("--log_interval", default=20, type=int)
     parser.add_argument("--evaluation_strategy", default="steps", type=str)
     parser.add_argument("--eval_steps", default=0.1, type=float)
@@ -332,10 +356,16 @@ if __name__ == "__main__":
         help="Enable per device batch and gradient accumulation",
     )
     parser.add_argument(
-        "--fp16", default=False, type=bool, help="Enable fp16 precision"
+        "--fp16",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="Enable fp16 precision",
     )
     parser.add_argument(
-        "--bf16", default=False, type=bool, help="Enable bf16 precision"
+        "--bf16",
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help="Enable bf16 precision",
     )
     parser.add_argument(
         "--seed_data",
@@ -367,7 +397,7 @@ if __name__ == "__main__":
     if "_comment" in config_defaults:
         config_defaults.pop("_comment")
     # Update parser defaults based on JSON configuration
-    # parser.set_defaults(**config_defaults)
+    parser.set_defaults(**config_defaults)
     # Now parse the rest of the arguments with the updated defaults
     # args = parser.parse_args(remaining_argv)
     args = parser.parse_args("") if is_interactive() else parser.parse_args()

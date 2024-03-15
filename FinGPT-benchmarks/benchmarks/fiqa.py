@@ -76,11 +76,13 @@ def test_fiqa(args, model, tokenizer, prompt_fun=add_instructions, silent=True):
     dataset[["context","target"]] = dataset.apply(format_example, axis=1, result_type="expand")
 
     # print example
-    print(f"\n\nPrompt example:\n{dataset['context'][0]}\n\n")
+    if not silent:
+        print(f"\n\nPrompt example:\n{dataset['context'][0]}\n\n")
 
     context = dataset['context'].tolist()
     total_steps = dataset.shape[0]//batch_size + 1
-    print(f"Total len: {len(context)}. Batchsize: {batch_size}. Total steps: {total_steps}")
+    if not silent:
+        print(f"Total len: {len(context)}. Batchsize: {batch_size}. Total steps: {total_steps}")
 
     out_text_list = []
     

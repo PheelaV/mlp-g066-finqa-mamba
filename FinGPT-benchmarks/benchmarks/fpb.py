@@ -50,7 +50,9 @@ def vote_output(x):
         return 'neutral'
     
 def test_fpb(args, model, tokenizer, prompt_fun=None, silent=True):
-    print("Running test_fpb")
+    # print what test is being done
+    print("Testing on Financial Phrasebank dataset")
+
     batch_size = args.batch_size
     # instructions = load_dataset("financial_phrasebank", "sentences_50agree")
     instructions = load_from_disk("../data/financial_phrasebank-sentences_50agree/")

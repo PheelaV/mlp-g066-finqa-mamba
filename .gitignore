@@ -174,3 +174,4 @@ FinGPT-benchmarks/data/*
 !FinGPT-benchmarks/data/*.py
 
 FinGPT-benchmarks/benchmarks/FinNLP
+*.zip

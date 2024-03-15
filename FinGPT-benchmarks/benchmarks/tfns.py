@@ -30,6 +30,9 @@ def change_target(x):
         return 'neutral'
 
 def test_tfns(args, model, tokenizer, prompt_fun=None, silent=True):
+    # print what test is being done
+    print("Testing on Twitter Financial News Sentiment dataset")
+
     batch_size = args.batch_size
     # dataset = load_dataset('zeroshot/twitter-financial-news-sentiment')
     dataset = load_from_disk('../data/twitter-financial-news-sentiment')

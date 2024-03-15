@@ -34,6 +34,9 @@ def change_target(x):
         return 'neutral'
 
 def test_nwgi(args, model, tokenizer, prompt_fun=None, silent=True):
+    # print what test is being done
+    print("Testing on News with GPT instructions dataset")
+
     batch_size = args.batch_size
     # dataset = load_dataset('oliverwang15/news_with_gpt_instructions')
     dataset = load_from_disk('../data/news_with_gpt_instructions/')

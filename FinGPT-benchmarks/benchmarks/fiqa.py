@@ -56,6 +56,9 @@ def vote_output(x):
     
 
 def test_fiqa(args, model, tokenizer, prompt_fun=add_instructions):
+    # print what test is being done
+    print("Testing on FIQA-2018 dataset")
+
     batch_size = args.batch_size
     dataset = load_dataset('pauri32/fiqa-2018')
     # dataset = load_from_disk('../data/fiqa-2018/')
@@ -148,7 +151,7 @@ def test_fiqa_mlt(args, model, tokenizer):
             inputs = {key: value.to(model.device) for key, value in inputs.items()}
             res = model.generate(**inputs, do_sample=False, max_length=args.max_length, eos_token_id=tokenizer.eos_token_id)#, max_new_tokens=10)
             res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
-            tqdm.write(f'{idx}: {res_sentences[0]}')
+            # tqdm.write(f'{idx}: {res_sentences[0]}')
             # if (idx + 1) % log_interval == 0:
             #     tqdm.write(f'{idx}: {res_sentences[0]}')
             out_text = [o.split("Answer: ")[1] for o in res_sentences]

@@ -56,8 +56,25 @@ def test_fineval(args, model, tokenizer, silent=True) -> Tuple[Dataset | Dataset
         res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
         if (idx + 1) % log_interval == 0 and not silent:
             tqdm.write(f"{idx}: {res_sentences[0]}")
-        out_text = [o.split("Answer: ")[1] for o in res_sentences]
-        out_text_list += out_text
+        # So this is problematic, but better than the original alternative:
+        # `out_text = [o.split("Answer: ")[1] if "Answer: " in o else "" for o in res_sentences]``
+        # out_text_list += out_text
+        # what if the answer has multiple answers? Then this restricts it to the
+        # first answer only -> we are keeping original behaviour, just making sure
+        # that when the model does not return an answer, we don't don't crash on the
+        # indexig
+        # TODO: see if this chanes the numbers?
+        for answer in res_sentences:
+            # if both
+            if "Answer: " in answer:
+                # and
+                out_text = answer.split("Answer: ")
+                if len(out_text) >= 2:
+                    # then
+                    out_text_list.append(out_text[1])
+                    continue
+                # otherwise in any case
+                out_text_list.append("")
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
         elif torch.cuda.is_available():

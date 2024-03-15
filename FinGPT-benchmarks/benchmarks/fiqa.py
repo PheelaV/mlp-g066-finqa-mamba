@@ -99,8 +99,25 @@ def test_fiqa(args, model, tokenizer, prompt_fun=add_instructions, silent=True) 
         res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
         if not silent:
             tqdm.write(f'{i}: {res_sentences[0]}')
-        out_text = [o.split("Answer: ")[1] for o in res_sentences]
-        out_text_list += out_text
+        # So this is problematic, but better than the original alternative:
+        # `out_text = [o.split("Answer: ")[1] if "Answer: " in o else "" for o in res_sentences]``
+        # out_text_list += out_text
+        # what if the answer has multiple answers? Then this restricts it to the
+        # first answer only -> we are keeping original behaviour, just making sure
+        # that when the model does not return an answer, we don't don't crash on the
+        # indexig
+        # TODO: see if this chanes the numbers?
+        for answer in res_sentences:
+            # if both
+            if "Answer: " in answer:
+                # and
+                out_text = answer.split("Answer: ")
+                if len(out_text) >= 2:
+                    # then
+                    out_text_list.append(out_text[1])
+                    continue
+                # otherwise in any case
+                out_text_list.append("")
         if torch.backends.mps.is_available():
             torch.mps.empty_cache()
         elif torch.cuda.is_available():
@@ -125,7 +142,7 @@ def test_fiqa(args, model, tokenizer, prompt_fun=add_instructions, silent=True) 
     return dataset, ClsMetrics(acc, f1_macro, f1_micro, f1_weighted)
 
 
-def test_fiqa_mlt(args, model, tokenizer) -> Tuple[Dataset | DatasetDict, List[ClsMetrics]]:
+def test_fiqa_mlt(args, model, tokenizer, silent=True) -> Tuple[Dataset | DatasetDict, List[ClsMetrics]]:
     batch_size = args.batch_size
     # dataset = load_dataset('pauri32/fiqa-2018')
     dataset = load_from_disk('../data/fiqa-2018/')
@@ -164,11 +181,30 @@ def test_fiqa_mlt(args, model, tokenizer) -> Tuple[Dataset | DatasetDict, List[C
             inputs = {key: value.to(model.device) for key, value in inputs.items()}
             res = model.generate(**inputs, do_sample=False, max_length=args.max_length, eos_token_id=tokenizer.eos_token_id)#, max_new_tokens=10)
             res_sentences = [tokenizer.decode(i, skip_special_tokens=True) for i in res]
-            # tqdm.write(f'{idx}: {res_sentences[0]}')
-            # if (idx + 1) % log_interval == 0:
-            #     tqdm.write(f'{idx}: {res_sentences[0]}')
-            out_text = [o.split("Answer: ")[1] for o in res_sentences]
-            out_texts_list[i] += out_text
+
+            if (idx + 1) % log_interval == 0 and not silent:
+                tqdm.write(f'{idx}: {res_sentences[0]}')
+            # So this is problematic, but better than the original alternative:
+            # `            out_text = [o.split("Answer: ")[1] for o in res_sentences]
+            #              out_texts_list[i] += out_text`
+            # out_text_list += out_text
+            # what if the answer has multiple answers? Then this restricts it to the
+            # first answer only -> we are keeping original behaviour, just making sure
+            # that when the model does not return an answer, we don't don't crash on the
+            # indexig
+            # TODO: see if this chanes the numbers?
+            for answer in res_sentences:
+                # if both
+                if "Answer: " in answer:
+                    # and
+                    out_text = answer.split("Answer: ")
+                    if len(out_text) >= 2:
+                        # then
+                        out_texts_list[i].append(out_text[1])
+                        continue
+                    # otherwise in any case
+                    out_texts_list[i].append("")
+
             if torch.backends.mps.is_available():
                 torch.mps.empty_cache()
             elif torch.cuda.is_available():

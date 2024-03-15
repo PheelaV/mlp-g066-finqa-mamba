@@ -17,12 +17,10 @@ conda activate $CONDA_ENV_NAME
 #     torchaudio==2.1.1 \
 #     pytorch-cuda=12.1 \
 conda install -y \
-    pytorch=2.2 \
-    torchvision \
-    torchaudio \
-    pytorch-cuda=12.1 \
-    -c pytorch -c nvidia \
-    pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconvert
+    pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconvert \
+    pytorch=2.2 torchvision torchaudio pytorch-cuda=12.1 
+    -c pytorch \
+    -c nvidia
 # arm mac:
 # conda install -y pytorch::pytorch torchvision torchaudio -c pytorch
 
@@ -37,7 +35,7 @@ conda install -y pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconve
 # https://huggingface.co/state-spaces/mamba-2.8b-hf 
 pip install git+https://github.com/huggingface/transformers@main
 
-pip install -U datasets trl wandb peft
+pip install -U datasets trl wandb peft accelerate
 pip install causal-conv1d>=1.2.0
 pip install mamba-ssm
 # benchmarks
@@ -47,6 +45,8 @@ conda list
 echo "-----------------------"
 echo "DONE"
 
+# mixed precision
+# conda install conda-forge::nvidia-apex
 
 # for the distributed stuff
 # pip install deepspeed bitsandbytes

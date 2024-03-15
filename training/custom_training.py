@@ -6,14 +6,13 @@ import torch
 from typing import Optional, List, Tuple, Union, Any
 from torch.nn.functional import cross_entropy
 from typing import Dict, Sequence
-import os
 from transformers import DataCollatorForSeq2Seq
 from transformers.trainer_pt_utils import nested_detach
 
 
 def _compute_loss(self, model, inputs, return_outputs=False):
     input_ids = inputs.pop("input_ids")
-    prompt_weighted_mask = inputs.pop("prompt_weighted_mask")
+    pwm = inputs.pop("prompt_weighted_mask")
     outputs = model(input_ids)
 
     lm_logits = outputs.logits
@@ -28,13 +27,15 @@ def _compute_loss(self, model, inputs, return_outputs=False):
         reduction="none",
         ignore_index=self.padding_token_id,
     )
+    lm_loss = lm_loss * pwm.view(-1)
+    loss = lm_loss.mean() * lm_loss.size(0) / max(pwm.sum().item(), 1e-8)
 
-    lm_loss = lm_loss * prompt_weighted_mask.view(-1)
-    del prompt_weighted_mask
+    del pwm
     del shift_logits
     del labels
+    del input_ids
+    del lm_loss
 
-    loss = lm_loss.mean()
     return (loss, outputs) if return_outputs else loss
 
 
@@ -105,13 +106,11 @@ class CustomSFTTrainer(SFTTrainer):
     def __init__(
         self,
         *args,
-        prompt_loss_weight: float = 1.0,
         padding_token_id=-100,
         **kwargs,
     ):
         # if ""
         super().__init__(*args, **kwargs)
-        self.prompt_loss_weight = prompt_loss_weight
         self.padding_token_id = padding_token_id
 
     def compute_loss(self, model, inputs, return_outputs=False):
@@ -193,8 +192,8 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
     def __call__(self, features: Sequence[Dict]) -> Dict:
         # turns out this is not necessary if remove_unused_columns is set to False (as unused is determined by the partiuclar model signature) in trainer.py
         batch = super().__call__(features, return_tensors="pt")
-        if self.prompt_loss_weight == 1:
-            return batch
+        # if self.prompt_loss_weight == 1:
+        #     return batch
         batch_size, seq_len = batch["input_ids"].size()
         # here the tensors are still on the CPU
         # `seq_len - 1` because we are using all of this for causal LM and this
@@ -205,5 +204,11 @@ class CustomDataCollatorSeq2Seq(DataCollatorForSeq2Seq):
         # `batch["prompt_lens"] - 1` at the same time we shorten the patting by one to make the shapes
         # compatible later on.            \/
         mask = (arange_mask < (batch.pop("prompt_lens") - 1).unsqueeze(1)).float()
-        batch["prompt_weighted_mask"] = mask * self.prompt_loss_weight + (1 - mask)
+        batch["prompt_weighted_mask"] = (
+            # this is the meask i.e. 0.1, 0.1, 1, 1, 1, 1 for prompt_lens = 2 and seq_len =
+            # 6 because of padding but answer might just be 2
+            mask * self.prompt_loss_weight + (1 - mask)
+            # so we need to mask the mask to get
+            # 0.1, 0.1, 1, 1, 0, 0 and has the correct weight (used for mean calculation)
+        ) * (arange_mask < (batch.pop("input_lens") - 1).unsqueeze(1)).float()
         return batch

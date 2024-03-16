@@ -110,7 +110,6 @@ def main(args):
     formatted_time = current_time.strftime("%Y_%m_%d_%H%M")
     
     if args.resume_from_checkpoint is not None:
-        wandb.summary["checkpoint_path"] = args.resume_from_checkpoint
         checkpoint_path = Path(args.resume_from_checkpoint)
         model_folder_name = checkpoint_path.parent.name
     else:
@@ -196,6 +195,7 @@ def main(args):
             },
         )
         accelerator.trackers[0].run.name = args.run_name
+        accelerator.log({"start_time": datetime.now().isoformat()})
     elif not args.distributed:
         wandb.init(
             resume=args.resume_from_checkpoint is not None,
@@ -205,18 +205,20 @@ def main(args):
             dir=args.working_dir,
             group=args.run_name,
         )
+        if args.resume_from_checkpoint is not None:
+            wandb.summary["checkpoint_path"] = args.resume_from_checkpoint
 
     if args.local_rank == 0:
         start_time = datetime.now()
         print(f"Start Time: {start_time.isoformat()}")
-        wandb.log({"start_time": start_time})
-
+        wandb.summary["start_time"] = start_time.isoformat()
     trainer.train()
+
 
     if args.local_rank == 0:
         end_time = datetime.now()
-        wandb.log({"end_time": end_time})
         print(f"End Time: {end_time.isoformat()}")
+        wandb.summary["end_tiem"] = end_time.isoformat()
     # Save the fine-tuned model
     finetuned_model_run_name = f"{args.base_model}_{args.run_name}_{formatted_time}"
     trainer.save_model(
@@ -226,8 +228,6 @@ def main(args):
             finetuned_model_run_name,
         )
     )
-    wandb.summary["start_time"] = start_time.isoformat()
-    wandb.summary["end_tiem"] = end_time.isoformat()
 
 
 # In[4]:

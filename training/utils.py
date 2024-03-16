@@ -472,6 +472,12 @@ def get_trainer(args, model, tokenizer, dataset, model_folder_name):
     """
     Create the trainer and training arguments
     """
+    if args.resume_from_checkpoint is not None:
+        if args.local_rank == 0:
+            print(
+                f"Resuming training from checkpoint: {args.resume_from_checkpoint}"
+            )
+            return custom_training.CustomSFTTrainer(resume_from_checkpoint=args.resume_from_checkpoint)
 
     common_args = {
         "run_name": args.run_name,

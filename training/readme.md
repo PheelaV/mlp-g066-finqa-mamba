@@ -95,9 +95,88 @@ CUDA_VISIBLE_DEVICES=1 python train.py \
 # Experiment 2
 
 I was able to make this run with context_length=2048 on 2x24GB 3090
+```sh
+accelerate launch train.py --run_name mamba_m_mt_2 --base_model mamba-medium --num_epochs 2 --eval_steps 0.05 --lora 8 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --eval_accumulation_steps 4 --gradient_steps 4 --distributed --batch_size 16
 ```
-accelerate launch train.py --run_name "pythia_m_mt_0" --base_model pythia-medium     --lora 8 --prompt_loss_weight 0 --max_length 2048 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --eval_accumulation_steps 4 --gradient_steps 4 --distributed
+
+ZeRO stage 2 2x A6000 48GB, usage: 46.5GB and 40GB 
+```sh
+accelerate launch train.py --run_name mamba_m_mt_0 --base_model pythia-medium --num_epochs 2 --eval_steps 0.05 --lora 8 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --eval_accumulation_steps 4 --gradient_steps 4 --distributed --shared_dir ~/shared --batch_size 16
 ```
+
+Crazy big chonker
+```sh
+accelerate launch train.py --run_name mamba_m_mt_0 --base_model mamba-big --num_epochs 2 --eval_steps 0.05 --lora 8 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --eval_accumulation_steps 4 --gradient_steps 4 --distributed --batch_size 32 --bf16
+```
+
+# Can I train a 3B model on a single 80GB card?
+
+Yes! This one takes about 24h on a single H100:
+
+## Mamba
+```sh
+python train.py --run_name test_big_chungus --base_model mamba-big --num_epochs 2 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --num_workers all --batch_size 2
+```
+
+Adding `--bf16` takes it down to ~22h
+```sh
+python train.py --run_name test_big_chungus --base_model mamba-big --num_epochs 2 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --num_workers all --batch_size 2 --bf16
+```
+Adding `--eval_accumulation_steps 4 --gradient_steps 4` takes it down to ~15h
+```sh
+python train.py --run_name test_big_chungus --base_model mamba-big --num_epochs 2 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --num_workers all --batch_size 2 --bf16 --eval_accumulation_steps 4 --gradient_steps 4 
+```
+Adding `--lora 8` takes it down to ~15h, again we see reduced memory/computation footprint
+```sh
+python train.py --run_name test_big_chungus --base_model mamba-big --num_epochs 2 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --num_workers all --batch_size 2 --bf16 --eval_accumulation_steps 4 --gradient_steps 4 --lora 8
+```
+Increasing the batch size to `4` yields about 8h and to `8` about 6h
+
+
+## Pythia
+Now going back to the transformer, this gets an OOM otherwise it was looking like somewhere around 20h
+```sh
+python train.py --run_name test_big_chungus_pythia --base_model pythia-big --num_epochs 2 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 2048 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --num_workers all --batch_size 2
+```
+
+So I go back to 512 seq_len and get also around 20h
+```sh
+python train.py --run_name test_big_chungus_pythia --base_model pythia-big --num_epochs 2 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --num_workers all --batch_size 2
+```
+
+Now what about half-precision? Bf16 takes it down to about 15 hours and fp16 about 18
+```sh
+python train.py --run_name test_big_chungus_pythia --base_model pythia-big --num_epochs 2 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --num_workers all --batch_size 2 --bf16
+```
+
+Adding grad step slashes it down to 9h
+```sh
+python train.py --run_name test_big_chungus_pythia --base_model pythia-big --num_epochs 2 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --num_workers all --batch_size 2 --bf16 --eval_accumulation_steps 4 --gradient_steps 4 
+```
+
+Assing `--lora 8` and we're down to about 6.5h, in particular I see we are using only about 23GB memory and half the compute
+```sh
+python train.py --run_name test_big_chungus_pythia --base_model pythia-big --num_epochs 2 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --num_workers all --batch_size 2 --bf16 --eval_accumulation_steps 4 --gradient_steps 4 
+```
+
+Increasing the batch size to `4` yields about 4h 15min and to `8` about 2h 30min
+
+
+
+about 4 hours on an A100
+```
+train.py --run_name mamba_m_mt_0 --base_model mamba-medium --num_epochs 2 --eval_steps 0.05 --lora 8 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --eval_accumulation_steps 4 --gradient_ste
+ps 4 --batch_size 8 --bf16
+```
+
+# about 24h of just 
+
+mamba_m_mt_0
+
+pythia_m_mt_0
+
+CUDA_VISIBLE_DEVICES=0,1,2,3
+
 
 from FinGpT "Multi-task Instruction Tuning"
 <!-- CUDA_VISIBLE_DEVICES=0 -->

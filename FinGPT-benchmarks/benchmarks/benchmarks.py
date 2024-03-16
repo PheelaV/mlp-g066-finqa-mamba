@@ -22,6 +22,8 @@ from finred import test_re
 from utils import parse_model_name
 import sys
 
+from mamba_ssm.models.mixer_seq_simple import MambaLMHeadModel
+
 sys.path.append("../")
 
 
@@ -69,6 +71,7 @@ def main(args):
     else:
         model_name = "../" + parse_model_name(args.base_model)
 
+# <<<<<<< HEAD
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         # trust_remote_code= True if not args.force_use_model else None,
@@ -76,7 +79,7 @@ def main(args):
         device_map="auto",
         # fp16=True
     )
-    model.model_parallel = True
+    # model.model_parallel = True
 
     tokenizer = get_tokenizer(args, model_name)
     # tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)

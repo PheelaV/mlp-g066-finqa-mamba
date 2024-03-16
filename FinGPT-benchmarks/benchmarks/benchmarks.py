@@ -70,7 +70,7 @@ def main(args):
     elif torch.cuda.is_available():
         device = torch.device("cuda")
 
-    is_mamba = "mamba" in args.model_name
+    is_mamba = "mamba" in model_name
     if is_mamba:
         model = MambaLMHeadModel.from_pretrained(model_name, device=device)
     else:

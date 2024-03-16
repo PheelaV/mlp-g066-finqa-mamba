@@ -17,10 +17,10 @@ conda activate $CONDA_ENV_NAME
 #     torchaudio==2.1.1 \
 #     pytorch-cuda=12.1 \
 conda install -y \
-    pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconvert \
-    pytorch=2.2 torchvision torchaudio pytorch-cuda=12.1 
-    -c pytorch \
-    -c nvidia
+pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconvert \
+pytorch=2.2 torchvision torchaudio pytorch-cuda=12.1 \
+-c pytorch \
+-c nvidia
 # arm mac:
 # conda install -y pytorch::pytorch torchvision torchaudio -c pytorch
 
@@ -33,11 +33,13 @@ conda install -y pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconve
 # ~/miniconda3/envs/mlp_g066_training/lib/python3.11/site-packages/trl/core.py
 # and comment out the import statement that is being reported "something top k blah blah"
 # https://huggingface.co/state-spaces/mamba-2.8b-hf 
-pip install git+https://github.com/huggingface/transformers@main
+python -m pip install git+https://github.com/huggingface/transformers@main
 
-pip install -U datasets trl wandb peft accelerate
-pip install causal-conv1d>=1.2.0
-pip install mamba-ssm
+python -m pip install -U datasets trl wandb peft accelerate
+python -m pip install causal-conv1d>=1.2.0
+python -m pip install mamba-ssm
+# benchmarks
+python -m pip install seqeval
 
 conda list
 echo "-----------------------"
@@ -47,7 +49,7 @@ echo "DONE"
 # conda install conda-forge::nvidia-apex
 
 # for the distributed stuff
-# pip install deepspeed bitsandbytes
+# python -m pip install deepspeed bitsandbytes mamba-ssm causal-conv1d>=1.2.0 datasets trl wandb peft accelerate
 
 # mamba is a bit tricky to install
 # if pytorch is too old or too new

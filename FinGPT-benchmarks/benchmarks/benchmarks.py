@@ -1,4 +1,10 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers.utils import logging
+# this is for the pesky eror about padding to the left, I think that is incorrect
+# as the models have been trained with right padding
+# this thread suggests to supress the warning 
+# https://stackoverflow.com/questions/74748116/huggingface-automodelforcasuallm-decoder-only-architecture-warning-even-after
+logging.get_logger("transformers").setLevel(logging.ERROR)
 import torch
 import argparse
 import os
@@ -65,24 +71,23 @@ def main(args):
 
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        trust_remote_code= True if not args.force_use_model else None,
+        # trust_remote_code= True if not args.force_use_model else None,
         # load_in_8bit=True
         device_map="auto",
         # fp16=True
     )
     model.model_parallel = True
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-
+    tokenizer = get_tokenizer(args, model_name)
+    # tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
     # tokenizer.pad_token_id = tokenizer.eos_token_id
-
-    tokenizer.padding_side = "left"
-    if args.base_model == "qwen":
-        tokenizer.eos_token_id = tokenizer.convert_tokens_to_ids("<|endoftext|>")
-        tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids("<|extra_0|>")
-    if not tokenizer.pad_token or tokenizer.pad_token_id == tokenizer.eos_token_id:
-        tokenizer.add_special_tokens({"pad_token": "[PAD]"})
-        model.resize_token_embeddings(len(tokenizer))
+    # tokenizer.padding_side = "left"
+    # if args.base_model == "qwen":
+    #     tokenizer.eos_token_id = tokenizer.convert_tokens_to_ids("<|endoftext|>")
+    #     tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids("<|extra_0|>")
+    # if not tokenizer.pad_token or tokenizer.pad_token_id == tokenizer.eos_token_id:
+    #     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+    #     model.resize_token_embeddings(len(tokenizer))
 
     print(f"pad: {tokenizer.pad_token_id}, eos: {tokenizer.eos_token_id}")
 

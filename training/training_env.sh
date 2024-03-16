@@ -38,6 +38,8 @@ pip install git+https://github.com/huggingface/transformers@main
 pip install -U datasets trl wandb peft accelerate
 pip install causal-conv1d>=1.2.0
 pip install mamba-ssm
+# benchmarks
+pip install seqeval
 
 conda list
 echo "-----------------------"

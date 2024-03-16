@@ -190,6 +190,7 @@ def main(args):
             project_name="mlp-g066",
             config=common_args,
             init_kwargs={
+                "resume":args.resume_from_checkpoint is not None,
                 "dir": args.working_dir,
                 "group": args.run_name,
             },
@@ -197,6 +198,7 @@ def main(args):
         accelerator.trackers[0].run.name = args.run_name
     elif not args.distributed:
         wandb.init(
+            resume=args.resume_from_checkpoint is not None,
             project="mlp-g066",
             name=args.run_name,
             config=common_args,

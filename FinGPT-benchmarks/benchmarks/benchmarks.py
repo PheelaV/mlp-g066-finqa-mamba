@@ -16,6 +16,8 @@ from finred import test_re
 from utils import parse_model_name
 import sys
 
+from mamba_ssm.models.mixer_seq_simple import MambaLMHeadModel
+
 sys.path.append("../")
 
 
@@ -63,13 +65,24 @@ def main(args):
     else:
         model_name = "../" + parse_model_name(args.base_model)
 
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        trust_remote_code= True if not args.force_use_model else None,
-        # load_in_8bit=True
-        device_map="auto",
-        # fp16=True
-    )
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+
+    is_mamba = args.base_model.contains("mamba")
+    if is_mamba:
+        model = MambaLMHeadModel.from_pretrained(args.model_name, device=device)
+    else:
+        model = AutoModelForCausalLM.from_pretrained(args.model_name, device_map={"": device})
+
+    # model = AutoModelForCausalLM.from_pretrained(
+    #     model_name,
+    #     trust_remote_code= True if not args.force_use_model else None,
+    #     device_map={": device"},
+    #     # load_in_8bit=True
+    #     # fp16=True
+    # )
     model.model_parallel = True
 
     tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)

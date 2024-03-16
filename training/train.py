@@ -411,10 +411,8 @@ if __name__ == "__main__":
 
     if args.num_workers == "all":
         args.num_workers = os.cpu_count()
-    elif args.num_workers.isdigit():
+    else: 
         args.num_workers = int(args.num_workers)
-    else:
-        raise ValueError("num_workers must be 'all' or an integer")
     
     if args.resume_from_checkpoint is not None:
         checkpoint_path = Path(args.resume_from_checkpoint)

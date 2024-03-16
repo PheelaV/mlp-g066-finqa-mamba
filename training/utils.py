@@ -468,7 +468,7 @@ def get_dataset(args, tokenizer, return_text=False):
     return dataset
 
 
-def get_trainer(args, model, tokenizer, dataset, formatted_time):
+def get_trainer(args, model, tokenizer, dataset, model_folder_name):
     """
     Create the trainer and training arguments
     """
@@ -478,7 +478,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         "output_dir": os.path.join(
             args.working_dir,
             "finetuned_models",
-            f"{args.base_model}_{args.run_name}_{formatted_time}",
+            model_folder_name,
         ),
         # "dataloader_num_workers": args.num_workers,
         "remove_unused_columns": False,  # for pre-tokenized datasets
@@ -512,7 +512,7 @@ def get_trainer(args, model, tokenizer, dataset, formatted_time):
         common_args.update(
             {
                 # "fp16_backend": "apex",  # AUTO
-                "fp16_full_eval": True,
+                # "fp16_full_eval": True,
                 "fp16_opt_level": "O1",
                 "fp16": args.fp16 & torch.cuda.is_available(),
                 "bf16": args.bf16 & torch.cuda.is_available(),

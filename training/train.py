@@ -25,7 +25,7 @@
 
 import os
 import json
-
+from pathlib import Path
 import argparse
 from datetime import datetime
 
@@ -36,6 +36,7 @@ import custom_training
 
 from transformers import AutoModelForCausalLM
 from accelerate import Accelerator
+import wandb
 
 
 def is_interactive():
@@ -103,6 +104,17 @@ def main(args):
         accelerator = Accelerator(log_with="wandb")
         args.local_rank = accelerator.device.index
         args.num_processes = accelerator.num_processes
+        
+    # Create a timestamp for model saving
+    current_time = datetime.now()
+    formatted_time = current_time.strftime("%Y_%m_%d_%H%M")
+    
+    if args.resume_from_checkpoint is not None:
+        wandb.summary["checkpoint_path"] = args.resume_from_checkpoint
+        checkpoint_path = Path(args.resume_from_checkpoint)
+        model_folder_name = checkpoint_path.parent.name
+    else:
+        model_folder_name =  f"{args.base_model}_{args.run_name}_{formatted_time}"
 
     # device = (
     #     torch.device("cuda")
@@ -162,22 +174,16 @@ def main(args):
     if args.local_rank == 0:
         print(model)
 
-    # Create a timestamp for model saving
-    current_time = datetime.now()
-    formatted_time = current_time.strftime("%Y_%m_%d_%H%M")
-
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     tokenizer = utils.get_tokenizer(args, model_name)
 
     trainer, training_args, common_args = utils.get_trainer(
-        args, model, tokenizer, dataset, formatted_time
+        args, model, tokenizer, dataset, model_folder_name
     )
 
     # Clear CUDA cache and start training
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
-
-    import wandb
 
     if args.distributed and args.local_rank == 0:
         accelerator.init_trackers(
@@ -218,6 +224,8 @@ def main(args):
             finetuned_model_run_name,
         )
     )
+    wandb.summary["start_time"] = start_time.isoformat()
+    wandb.summary["end_tiem"] = end_time.isoformat()
 
 
 # In[4]:
@@ -333,9 +341,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--resume_from_checkpoint",
-        default=False,
-        action=argparse.BooleanOptionalAction,
-        help="Resume training from a checkpoint of a previously saved model in the working_dir/finetuned_models",
+        default=None,
+        action=str,
+        help="Resume training from a checkpoint of - specify the full or relative path",
     )
     parser.add_argument(
         "--model_from_local",
@@ -405,6 +413,13 @@ if __name__ == "__main__":
         args.num_workers = int(args.num_workers)
     else:
         raise ValueError("num_workers must be 'all' or an integer")
+    
+    if args.resume_from_checkpoint is not None:
+        checkpoint_path = Path(args.resume_from_checkpoint)
+        if not checkpoint_path.exists():
+            raise ValueError(f"Checkpoint {args.resume_from_checkpoint} not found.")
+        if not checkpoint_path.is_dir():
+            raise ValueError(f"Checkpoint {args.resume_from_checkpoint} is not a directory.")
 
     main(args)
 

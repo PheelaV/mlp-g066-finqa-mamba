@@ -344,7 +344,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--resume_from_checkpoint",
         default=None,
-        action=str,
+        type=str,
         help="Resume training from a checkpoint of - specify the full or relative path",
     )
     parser.add_argument(

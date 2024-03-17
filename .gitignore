@@ -177,3 +177,4 @@ FinGPT-benchmarks/data/*
 
 FinGPT-benchmarks/benchmarks/FinNLP
 *.zip
+training/test_models/*

@@ -111,6 +111,8 @@ def main(args):
     # model = get_peft_model(model, peft_config)
     model = model.eval()
 
+    wandb.summary["model"] = args.base_model
+
     with torch.no_grad():
         for data in args.dataset.split(","):
             if data == "fpb":

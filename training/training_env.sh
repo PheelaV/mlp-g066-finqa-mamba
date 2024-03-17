@@ -18,7 +18,7 @@ conda activate $CONDA_ENV_NAME
 #     pytorch-cuda=12.1 \
 conda install -y \
     pytest pandas numpy tqdm ipykernel ipywidgets packaging nbconvert \
-    pytorch=2.2 torchvision torchaudio pytorch-cuda=12.1 
+    pytorch=2.2 torchvision torchaudio pytorch-cuda=12.1 \
     -c pytorch \
     -c nvidia
 # arm mac:

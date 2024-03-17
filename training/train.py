@@ -182,7 +182,10 @@ def main(args):
 
     # Clear CUDA cache and start training
     if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+        if torch.backends.mps.is_available():
+            torch.mps.empty_cache()
+        elif torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     if args.distributed and args.local_rank == 0:
         accelerator.init_trackers(
@@ -226,6 +229,7 @@ def main(args):
             args.working_dir if args.shared_dir is None else args.shared_dir,
             "finetuned_models",
             finetuned_model_run_name,
+            "final-best",
         )
     )
 

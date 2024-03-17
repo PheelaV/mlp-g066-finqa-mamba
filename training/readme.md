@@ -11,6 +11,53 @@ accelerate launch train.py --run_name test_wood_2  --config config_test.json --l
 ## DDP vs FSDP
 https://vitalflux.com/distributed-llm-training-explained-with-examples/
 
+CUDA_VISIBLE_DEVICES=1 python train.py \
+--run_name "mamba_s_mt+_0" \
+--base_model mamba-small \
+--prompt_loss_weight 0 \
+--max_length 512 \
+--config config_mt.json \
+--dataset "mathqa,squad,sentiment-train,headline,finred,ner" \
+--num_epochs 3 \
+--batch_size 16 \
+--eval_steps 0.05 \
+--eval_accumulation_steps 8 2>&1 | tee train4.log
+
+CUDA_VISIBLE_DEVICES=0 python train.py \
+--run_name "mamba_s_mt+_2" \
+--base_model mamba-small \
+--prompt_loss_weight 1 \
+--max_length 512 \
+--config config_mt.json \
+--dataset "mathqa,squad,sentiment-train,headline,finred,ner" \
+--num_epochs 3 \
+--batch_size 16 \
+--eval_steps 0.05 \
+--eval_accumulation_steps 8 2>&1 | tee train5.log
+
+CUDA_VISIBLE_DEVICES=1 python train.py \
+--run_name "pythia_s_mt+_0" \
+--base_model pythia-small \
+--prompt_loss_weight 0 \
+--max_length 512 \
+--config config_mt.json \
+--dataset "mathqa,squad,sentiment-train,headline,finred,ner" \
+--num_epochs 3 \
+--batch_size 16 \
+--eval_steps 0.05 \
+--eval_accumulation_steps 8 2>&1 | tee train4.log
+
+CUDA_VISIBLE_DEVICES=0 python train.py \
+--run_name "pythia_s_mt+_2" \
+--base_model pythia-small \
+--prompt_loss_weight 1 \
+--max_length 512 \
+--config config_mt.json \
+--dataset "mathqa,squad,sentiment-train,headline,finred,ner" \
+--num_epochs 3 \
+--batch_size 16 \
+--eval_steps 0.05 \
+--eval_accumulation_steps 8 2>&1 | tee train5.log
 
 # Experiment 1
 
@@ -156,7 +203,7 @@ python train.py --run_name test_big_chungus_pythia --base_model pythia-big --num
 
 Ading `--lora 8` and we're down to about 6.5h, in particular I see we are using only about 23GB memory and half the compute
 ```sh
-python train.py --run_name test_big_chungus_pythia --base_model pythia-big --num_epochs 2 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --num_workers all --batch_size 2 --bf16 --eval_accumulation_steps 4 --gradient_steps 4 
+python train.py --run_name test_big_chungus_pythia --base_model pythia-big --num_epochs 2 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --num_workers all --batch_size 2 --bf16 --eval_accumulation_steps 4 --gradient_steps 4 --lora 8
 ```
 
 Increasing the batch size to `4` yields about 4h 15min and to `8` about 2h 30min
@@ -164,7 +211,7 @@ Increasing the batch size to `4` yields about 4h 15min and to `8` about 2h 30min
 
 # This I might want to run for 3B
 ```sh
-python train.py --run_name pythia_l_mt_1 --base_model pythia-big --num_epochs 3 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --batch_size 8 --bf16 --eval_accumulation_steps 4 --gradient_steps 4 
+python train.py --run_name pythia_l_mt_1 --base_model pythia-big --num_epochs 3 --eval_steps 0.05 --prompt_loss_weight 0 --max_length 512 --config config_mt.json --dataset "sentiment-train,headline,finred*3,ner*15" --batch_size 8 --bf16 --eval_accumulation_steps 4 --gradient_steps 4  --lora 8
 ```
 
 about 4 hours on an A100
@@ -327,3 +374,91 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
 --eval_steps 0.02 \
 --eval_accumulation_steps 8
 --shared_dir ~/shared
+
+
+
+# MT+ m runs
+
+this looks like 7h
+```sh
+python train.py \
+--run_name "pythia_m_mt+_2" \
+--base_model pythia-medium \
+--prompt_loss_weight 1 \
+--max_length 512 \
+--config config_mt.json \
+--dataset "mathqa,squad,sentiment-train,headline,finred,ner" \
+--lora 8 \
+--bf16 \
+--gradient_steps 4 \
+--eval_steps 0.05 \
+--eval_accumulation_steps 8 \
+--batch_size 16
+```
+
+this looks like 7h
+```sh
+python train.py \
+--run_name "pythia_m_mt+_0" \
+--base_model pythia-medium \
+--prompt_loss_weight 0 \
+--max_length 512 \
+--config config_mt.json \
+--dataset "mathqa,squad,sentiment-train,headline,finred,ner" \
+--lora 8 \
+--bf16 \
+--gradient_steps 4 \
+--eval_steps 0.05 \
+--eval_accumulation_steps 8 \
+--batch_size 8
+```
+
+this looks like 14h
+```sh
+python train.py \
+--run_name "mamba_m_mt+_2" \
+--base_model mamba-medium \
+--prompt_loss_weight 1 \
+--max_length 512 \
+--config config_mt.json \
+--dataset "mathqa,squad,sentiment-train,headline,finred,ner" \
+--lora 8 \
+--bf16 \
+--gradient_steps 4 \
+--eval_steps 0.05 \
+--eval_accumulation_steps 8 \
+--batch_size 16
+```
+this looks like 14h
+```sh
+python train.py \
+--run_name "mamba_m_mt+_0" \
+--base_model mamba-medium \
+--prompt_loss_weight 0 \
+--max_length 512 \
+--config config_mt.json \
+--dataset "mathqa,squad,sentiment-train,headline,finred,ner" \
+--lora 8 \
+--bf16 \
+--gradient_steps 4 \
+--eval_steps 0.05 \
+--eval_accumulation_steps 8 \
+--batch_size 8
+```
+
+this looks like 20
+```sh
+python train.py \
+--run_name "mamba_m_mt+_0" \
+--base_model mamba-medium \
+--prompt_loss_weight 0 \
+--max_length 1024 \
+--config config_mt.json \
+--dataset "mathqa,squad,sentiment-train,headline,finred,ner" \
+--lora 8 \
+--bf16 \
+--gradient_steps 4 \
+--eval_steps 0.05 \
+--eval_accumulation_steps 8 \
+--batch_size 8
+```

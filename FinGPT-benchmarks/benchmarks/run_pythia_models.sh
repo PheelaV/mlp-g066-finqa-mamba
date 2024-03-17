@@ -3,6 +3,7 @@
 # Directory containing all the pythia models
 models_dir="../../training/test_models/pythia"
 
+bs=32
 
 ## BIG
 
@@ -10,7 +11,7 @@ models_dir="../../training/test_models/pythia"
 # python benchmarks.py \
 # --dataset fpb,fiqa,tfns,nwgi \
 # --force_use_model \
-# --batch_size 128 \
+# --batch_size $bs \
 # --max_length 512 \
 # --base_model "${models_dir}/pythia-big_pythia_l_mt_0_2024_03_16_1053/checkpoint-20691/"
 
@@ -20,7 +21,7 @@ models_dir="../../training/test_models/pythia"
 # python benchmarks.py \
 # --dataset fpb,fiqa,tfns,nwgi \
 # --force_use_model \
-# --batch_size 128 \
+# --batch_size $bs \
 # --max_length 512 \
 # --base_model "${models_dir}/pythia-medium_pythia_m_mt+_0_2024_03_17_0446/final-best/"
 
@@ -28,7 +29,7 @@ models_dir="../../training/test_models/pythia"
 # python benchmarks.py \
 # --dataset fpb,fiqa,tfns,nwgi \
 # --force_use_model \
-# --batch_size 128 \
+# --batch_size $bs \
 # --max_length 512 \
 # --base_model "${models_dir}/pythia-medium_pythia_m_mt_1_2024_03_16_1225/final-best/"
 
@@ -36,7 +37,7 @@ models_dir="../../training/test_models/pythia"
 # python benchmarks.py \
 # --dataset fpb,fiqa,tfns,nwgi \
 # --force_use_model \
-# --batch_size 128 \
+# --batch_size $bs \
 # --max_length 512 \
 # --base_model "${models_dir}/pythia-medium_pythia_m_mt_2_2024_03_16_1445/final-best/"
 
@@ -44,7 +45,7 @@ models_dir="../../training/test_models/pythia"
 # python benchmarks.py \
 # --dataset fpb,fiqa,tfns,nwgi \
 # --force_use_model \
-# --batch_size 128 \
+# --batch_size $bs \
 # --max_length 512 \
 # --base_model "${models_dir}/pythia-medsmall_pythia_ms_mt+_0_2024_03_17_0027/final-best/"
 
@@ -52,7 +53,7 @@ models_dir="../../training/test_models/pythia"
 # python benchmarks.py \
 # --dataset fpb,fiqa,tfns,nwgi \
 # --force_use_model \
-# --batch_size 128 \
+# --batch_size $bs \
 # --max_length 512 \
 # --base_model "${models_dir}/pythia-medsmall_pythia_ms_mt+_3_2024_03_17_0514/final-best/"
 
@@ -60,7 +61,7 @@ models_dir="../../training/test_models/pythia"
 # python benchmarks.py \
 # --dataset fpb,fiqa,tfns,nwgi \
 # --force_use_model \
-# --batch_size 128 \
+# --batch_size $bs \
 # --max_length 512 \
 # --base_model "${models_dir}/pythia-medsmall_pythia_ms_mt_0_2024_03_14_1735/"
 
@@ -68,7 +69,7 @@ models_dir="../../training/test_models/pythia"
 # python benchmarks.py \
 # --dataset fpb,fiqa,tfns,nwgi \
 # --force_use_model \
-# --batch_size 128 \
+# --batch_size $bs \
 # --max_length 512 \
 # --base_model "${models_dir}/pythia-medsmall_pythia_ms_mt_1_2024_03_14_1529/"
 
@@ -76,7 +77,7 @@ models_dir="../../training/test_models/pythia"
 # python benchmarks.py \
 # --dataset fpb,fiqa,tfns,nwgi \
 # --force_use_model \
-# --batch_size 128 \
+# --batch_size $bs \
 # --max_length 512 \
 # --base_model "${models_dir}/pythia-medsmall_pythia_ms_mt_2_2024_03_14_1601/checkpoint-28469/"
 
@@ -84,7 +85,7 @@ models_dir="../../training/test_models/pythia"
 # python benchmarks.py \
 # --dataset fpb,fiqa,tfns,nwgi \
 # --force_use_model \
-# --batch_size 128 \
+# --batch_size $bs \
 # --max_length 512 \
 # --base_model "${models_dir}/pythia_m_mt_0_2024_03_15_0539/checkpoint-13794/"
 
@@ -94,7 +95,7 @@ models_dir="../../training/test_models/pythia"
 python benchmarks.py \
 --dataset fpb,fiqa,tfns,nwgi \
 --force_use_model \
---batch_size 128 \
+--batch_size $bs \
 --max_length 512 \
 --base_model "${models_dir}/pythia-small_pythia_s_mt+_0_2024_03_16_1555/final-best/"
 
@@ -102,7 +103,7 @@ python benchmarks.py \
 python benchmarks.py \
 --dataset fpb,fiqa,tfns,nwgi \
 --force_use_model \
---batch_size 128 \
+--batch_size $bs \
 --max_length 512 \
 --base_model "${models_dir}/pythia-small_pythia_s_mt+_1_2024_03_16_2005/final-best/"
 
@@ -110,7 +111,7 @@ python benchmarks.py \
 python benchmarks.py \
 --dataset fpb,fiqa,tfns,nwgi \
 --force_use_model \
---batch_size 128 \
+--batch_size $bs \
 --max_length 512 \
 --base_model "${models_dir}/pythia-small_pythia_s_mt+_2_2024_03_16_1555/final-best/"
 
@@ -118,7 +119,7 @@ python benchmarks.py \
 python benchmarks.py \
 --dataset fpb,fiqa,tfns,nwgi \
 --force_use_model \
---batch_size 128 \
+--batch_size $bs \
 --max_length 512 \
 --base_model "${models_dir}/pythia-small_pythia_s_mt_0_2024_03_14_1430/"
 
@@ -126,7 +127,7 @@ python benchmarks.py \
 python benchmarks.py \
 --dataset fpb,fiqa,tfns,nwgi \
 --force_use_model \
---batch_size 128 \
+--batch_size $bs \
 --max_length 512 \
 --base_model "${models_dir}/pythia-small_pythia_s_mt_1_2024_03_14_0521/"
 
@@ -134,7 +135,7 @@ python benchmarks.py \
 python benchmarks.py \
 --dataset fpb,fiqa,tfns,nwgi \
 --force_use_model \
---batch_size 128 \
+--batch_size $bs \
 --max_length 512 \
 --base_model "${models_dir}/pythia-small_pythia_s_mt_1_2024_03_14_1138/checkpoint-28469/"
 
@@ -142,7 +143,7 @@ python benchmarks.py \
 python benchmarks.py \
 --dataset fpb,fiqa,tfns,nwgi \
 --force_use_model \
---batch_size 128 \
+--batch_size $bs \
 --max_length 512 \
 --base_model "${models_dir}/pythia-small_pythia_s_mt_2_2024_03_14_0944/checkpoint-28469/"
 
@@ -150,6 +151,6 @@ python benchmarks.py \
 python benchmarks.py \
 --dataset fpb,fiqa,tfns,nwgi \
 --force_use_model \
---batch_size 128 \
+--batch_size $bs \
 --max_length 512 \
 --base_model "${models_dir}/pythia_s_mt_0_2024_03_13_0356/checkpoint-26271/"

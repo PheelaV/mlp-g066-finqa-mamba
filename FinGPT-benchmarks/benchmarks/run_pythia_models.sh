@@ -13,7 +13,7 @@ bs=32
 # --force_use_model \
 # --batch_size $bs \
 # --max_length 512 \
-# --base_model "${models_dir}/pythia-big_pythia_l_mt_0_2024_03_16_1053/checkpoint-20691/"
+# --base_model "${models_dir}/pythia-big_pythia_l_mt_0_2024_03_16_1053/"
 
 ## MEDIUM
 
@@ -79,7 +79,7 @@ bs=32
 # --force_use_model \
 # --batch_size $bs \
 # --max_length 512 \
-# --base_model "${models_dir}/pythia-medsmall_pythia_ms_mt_2_2024_03_14_1601/checkpoint-28469/"
+# --base_model "${models_dir}/pythia-medsmall_pythia_ms_mt_2_2024_03_14_1601/"
 
 # # pythia_m_mt_0_2024_03_15_0539
 # python benchmarks.py \
@@ -137,7 +137,7 @@ python benchmarks.py \
 --force_use_model \
 --batch_size $bs \
 --max_length 512 \
---base_model "${models_dir}/pythia-small_pythia_s_mt_1_2024_03_14_1138/checkpoint-28469/"
+--base_model "${models_dir}/pythia-small_pythia_s_mt_1_2024_03_14_1138/"
 
 # pythia-small_pythia_s_mt_2_2024_03_14_0944
 python benchmarks.py \
@@ -145,7 +145,7 @@ python benchmarks.py \
 --force_use_model \
 --batch_size $bs \
 --max_length 512 \
---base_model "${models_dir}/pythia-small_pythia_s_mt_2_2024_03_14_0944/checkpoint-28469/"
+--base_model "${models_dir}/pythia-small_pythia_s_mt_2_2024_03_14_0944/"
 
 # pythia_s_mt_0_2024_03_13_0356
 python benchmarks.py \

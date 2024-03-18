@@ -89,6 +89,14 @@ bs=32
 # --max_length 512 \
 # --base_model "${models_dir}/pythia_m_mt_0_2024_03_15_0539/checkpoint-13794/"
 
+# pythia-medsmall_pythia_ms_mt_3_2024_03_17_1201
+python benchmarks.py \
+--dataset fpb,fiqa,tfns,nwgi \
+--force_use_model \
+--batch_size 128 \
+--max_length 512 \
+--base_model "${models_dir}/pythia-medsmall_pythia_ms_mt_3_2024_03_17_1201/final-best/"
+
 ## SMALL
 
 # pythia-small_pythia_s_mt+_0_2024_03_16_1555

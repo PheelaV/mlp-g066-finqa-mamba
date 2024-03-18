@@ -71,7 +71,6 @@ def main(args):
     else:
         model_name = "../" + parse_model_name(args.base_model)
 
-# <<<<<<< HEAD
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
         # trust_remote_code= True if not args.force_use_model else None,

@@ -41,6 +41,23 @@ models_dir="../../training/test_models/mamba"
 # --max_length 512 \
 # --base_model "${models_dir}/mamba-medium_mamba_m_mt_2_2024_03_16_0258/"
 
+# mamba-medium_mamba_m_mqsq_1_b_2024_03_17_0501_mamba_m_mqsq_1_b_mt_0_2024_03_17_1458
+python benchmarks.py \
+--dataset fpb,fiqa,tfns,nwgi \
+--force_use_model \
+--batch_size 128 \
+--max_length 512 \
+--base_model "${models_dir}/mamba-medium_mamba_m_mqsq_1_b_2024_03_17_0501_mamba_m_mqsq_1_b_mt_0_2024_03_17_1458/"
+
+# mamba-medium_mamba_m_mqsq_1_b_2024_03_17_0501_mamba_m_mqsq_1_b_mt_2_2024_03_17_1722
+python benchmarks.py \
+--dataset fpb,fiqa,tfns,nwgi \
+--force_use_model \
+--batch_size 128 \
+--max_length 512 \
+--base_model "${models_dir}/mamba-medium_mamba_m_mqsq_1_b_2024_03_17_0501_mamba_m_mqsq_1_b_mt_2_2024_03_17_1722/final-best/"
+
+
 ## SMALL
 
 # mamba-small_mamba_s_mt_0_2024_03_14_0457

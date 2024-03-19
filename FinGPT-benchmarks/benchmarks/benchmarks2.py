@@ -195,18 +195,19 @@ def main(args):
 
         if args.dry_run:
             continue
+        
+        if not args.dry_run and (args.lm_eval or args.fin_eval):
+            wandb_run = wandb.init(
+                project="mlp-g066-benchmarks2",
+                name=run_name,
+                group=run_name,
+            )
 
         if args.lm_eval:
             import wandb
 
             config = {}
             config.update(vars(args))
-            wandb_run = wandb.init(
-                project="mlp-g066-benchmarks2",
-                name=run_name,
-                config=config,
-                group=run_name,
-            )
 
             wandb.summary["model_name"] = run["model_name"]
             wandb.summary["max_len"] = run["max_len"]
@@ -301,7 +302,7 @@ def main(args):
                     else:
                         raise ValueError("undefined dataset.")
 
-        wandb_run.finish()
+        
     print("*" * 30)
     print("Evaluation Ends.")
 

@@ -111,7 +111,7 @@ def ls_models(base_path):
 
 def main(args):
     
-    run_info = {k: {"path": v} for k, v in ls_models(base_directory).items()}
+    run_info = {k: {"path": v} for k, v in ls_models(args.base_directory).items()}
 
     api = wandb.Api()
     runs = api.runs("mlp-24-g066/mlp-g066")

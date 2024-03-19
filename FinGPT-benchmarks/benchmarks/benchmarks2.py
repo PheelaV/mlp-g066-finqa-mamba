@@ -226,7 +226,6 @@ def main(args):
             wandb_logger.log_eval_result()
             wandb_logger.log_eval_samples(results["samples"])
 
-        if args.fin_eval:
             # if args.force_use_model:
             #     model_name = args.base_model
             # elif args.from_remote:
@@ -234,33 +233,34 @@ def main(args):
             # else:
             #     model_name = "../" + parse_model_name(args.base_model)
 
-            device = (
-                torch.device("cuda")
-                if torch.cuda.is_available()
-                else torch.device("mps")
-                if torch.backends.mps.is_available()
-                else torch.device("cpu")
-            )
-            if "mamba" in run["model_name"]:
-                model = MambaForCausalLM.from_pretrained(run["path"])
-            else:
-                model = AutoModelForCausalLM.from_pretrained(run["path"])
-            model = model.to(device)
-            model.eval()
+        device = (
+            torch.device("cuda")
+            if torch.cuda.is_available()
+            else torch.device("mps")
+            if torch.backends.mps.is_available()
+            else torch.device("cpu")
+        )
+        if "mamba" in run["model_name"]:
+            model = MambaForCausalLM.from_pretrained(run["path"])
+        else:
+            model = AutoModelForCausalLM.from_pretrained(run["path"])
+        model = model.to(device)
+        model.eval()
 
-            # if args.peft_model is not None:
-            #     base_model = model
-            #     model = PeftModel.from_pretrained(base_model, args.peft_model, device_map="auto")
+        # if args.peft_model is not None:
+        #     base_model = model
+        #     model = PeftModel.from_pretrained(base_model, args.peft_model, device_map="auto")
 
-            model = model.eval()
-            # model.model_parallel = True
-            # exit()
-            func_args = fake_args(32 * args.batch_factor, run["max_len"], args.logging, run["model_name"])
+        model = model.eval()
+        # model.model_parallel = True
+        # exit()
+        func_args = fake_args(32 * args.batch_factor, run["max_len"], args.logging, run["model_name"])
 
-            tokenizer = get_tokenizer(func_args, run["path"])
-            print(f"pad: {tokenizer.pad_token_id}, eos: {tokenizer.eos_token_id}")
+        tokenizer = get_tokenizer(func_args, run["path"])
+        print(f"pad: {tokenizer.pad_token_id}, eos: {tokenizer.eos_token_id}")
             # args.batch_size
             # args.max_length
+        if args.fin_eval:
             with torch.no_grad():
                 for data in args.dataset.split(","):
                     if data == "fpb":

@@ -376,14 +376,14 @@ if __name__ == "__main__":
         "--lm_eval",
         action=argparse.BooleanOptionalAction,
         type=bool,
-        default=False,
+        default=True,
         help="execute lm eval tasks",
     )
     parser.add_argument(
         "--fin_eval",
         action=argparse.BooleanOptionalAction,
         type=bool,
-        default=False,
+        default=True,
         help="execute FinGPT eval tasks",
     )
     parser.add_argument(

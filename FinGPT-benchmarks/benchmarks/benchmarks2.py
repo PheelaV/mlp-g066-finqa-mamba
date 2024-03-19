@@ -193,7 +193,7 @@ def main(args):
             model="hf",
             model_args=f"pretrained={run['path']},trust_remote_code=True",
             # tasks="arc_challenge,arc_easy,lambada,hallaswag,piqa,winogrande",
-            tasks=args.task,
+            tasks=args.task.split(","),
             log_samples=True,
         )
 

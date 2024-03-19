@@ -211,13 +211,19 @@ def main(args):
 
             wandb.summary["model_name"] = run["model_name"]
             wandb.summary["max_len"] = run["max_len"]
-            results = lm_eval.simple_evaluate(
-                model="hf",
-                model_args=f"pretrained={run['path']},trust_remote_code=True",
-                # tasks="arc_challenge,arc_easy,lambada,hellaswag,piqa,winogrande",
-                tasks=args.task.split(","),
-                log_samples=True,
-            )
+            
+            try:
+                results = lm_eval.simple_evaluate(
+                    model="hf",
+                    model_args=f"pretrained={run['path']},trust_remote_code=True",
+                    # tasks="arc_challenge,arc_easy,lambada,hellaswag,piqa,winogrande",
+                    tasks=args.task.split(","),
+                    log_samples=True,
+                )
+            except Exception as e:
+                print(f"!Error!: {e}")
+                wandb.summary["lm_eval_error"] = str(e)
+                continue
 
             wandb_logger = WandbLogger(
                 project="lm-eval-harness-integration", job_type="eval"
@@ -265,44 +271,48 @@ def main(args):
         if args.fin_eval:
             with torch.no_grad():
                 for data in args.dataset.split(","):
-                    if data == "fpb":
-                        _, metrics = test_fpb(func_args, model, tokenizer)
-                        log_cls_metrics(func_args, data, metrics)
-                    elif data == "fpb_mlt":
-                        _, template_metrics = test_fpb_mlt(func_args, model, tokenizer)
-                        for i, metrics in enumerate(template_metrics):
-                            log_cls_metrics(metrics, data, i)
-                    elif data == "fiqa":
-                        _, metrics = test_fiqa(func_args, model, tokenizer)
-                        log_cls_metrics(func_args, data, metrics)
-                    elif data == "fiqa_mlt":
-                        _, template_metrics = test_fiqa_mlt(func_args, model, tokenizer)
-                        for i, metrics in enumerate():
-                            log_cls_metrics(func_args, data, metrics, i)
-                    elif data == "tfns":
-                        _, metrics = test_tfns(func_args, model, tokenizer)
-                        log_cls_metrics(func_args, data, metrics)
-                    elif data == "nwgi":
-                        _, metrics = test_nwgi(func_args, model, tokenizer)
-                        log_cls_metrics(func_args, data, metrics)
-                    elif data == "convfinqa":
-                        _, acc = test_convfinqa(func_args, model, tokenizer)
-                        wandb.summary[f"{data}_acc"] = acc
-                        wandb.log({f"{data}_acc": acc})
-                    elif data == "fineval":
-                        _, acc = test_fineval(func_args, model, tokenizer)
-                        wandb.summary[f"{data}_acc"] = acc
-                        wandb.log({f"{data}_acc": acc})
-                    elif data == "re":
-                        metrics = test_re(func_args, model, tokenizer)
-                        log_what_is_this(func_args, data, metrics)
-                    # These two need to be looked at if we are to use them...
-                    elif data == "headline":
-                        test_headline(func_args, model, tokenizer)
-                    elif data == "ner":
-                        test_ner(func_args, model, tokenizer)
-                    else:
-                        raise ValueError("undefined dataset.")
+                    try:
+                        if data == "fpb":
+                            _, metrics = test_fpb(func_args, model, tokenizer)
+                            log_cls_metrics(func_args, data, metrics)
+                        elif data == "fpb_mlt":
+                            _, template_metrics = test_fpb_mlt(func_args, model, tokenizer)
+                            for i, metrics in enumerate(template_metrics):
+                                log_cls_metrics(metrics, data, i)
+                        elif data == "fiqa":
+                            _, metrics = test_fiqa(func_args, model, tokenizer)
+                            log_cls_metrics(func_args, data, metrics)
+                        elif data == "fiqa_mlt":
+                            _, template_metrics = test_fiqa_mlt(func_args, model, tokenizer)
+                            for i, metrics in enumerate():
+                                log_cls_metrics(func_args, data, metrics, i)
+                        elif data == "tfns":
+                            _, metrics = test_tfns(func_args, model, tokenizer)
+                            log_cls_metrics(func_args, data, metrics)
+                        elif data == "nwgi":
+                            _, metrics = test_nwgi(func_args, model, tokenizer)
+                            log_cls_metrics(func_args, data, metrics)
+                        elif data == "convfinqa":
+                            _, acc = test_convfinqa(func_args, model, tokenizer)
+                            wandb.summary[f"{data}_acc"] = acc
+                            wandb.log({f"{data}_acc": acc})
+                        elif data == "fineval":
+                            _, acc = test_fineval(func_args, model, tokenizer)
+                            wandb.summary[f"{data}_acc"] = acc
+                            wandb.log({f"{data}_acc": acc})
+                        elif data == "re":
+                            metrics = test_re(func_args, model, tokenizer)
+                            log_what_is_this(func_args, data, metrics)
+                        # These two need to be looked at if we are to use them...
+                        elif data == "headline":
+                            test_headline(func_args, model, tokenizer)
+                        elif data == "ner":
+                            test_ner(func_args, model, tokenizer)
+                        else:
+                            raise ValueError("undefined dataset.")
+                    except Exception as e:
+                        print(f"!Error!: {e}")
+                        wandb.summary[f"fin_eval_{data}_error"] = str(e)
 
         if not args.dry_run and (args.lm_eval or args.fin_eval):
             wandb_run.finish()

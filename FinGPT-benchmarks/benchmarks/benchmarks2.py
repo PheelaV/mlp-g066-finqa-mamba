@@ -35,7 +35,7 @@ from collections import namedtuple
 
 fake_args = namedtuple(
     "args",
-    ["batch_size", "max_length", "logging", "base_name"],
+    ["batch_size", "max_length", "logging", "base_model"],
 )
 # args.batch_size
 # args.max_length

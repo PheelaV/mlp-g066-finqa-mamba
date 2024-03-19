@@ -254,10 +254,10 @@ def main(args):
 
             model = model.eval()
             # model.model_parallel = True
-
+            # exit()
             func_args = fake_args(32 * args.batch_factor, run["max_len"], args.logging, run["model_name"])
 
-            tokenizer = get_tokenizer(args, run["path"])
+            tokenizer = get_tokenizer(func_args, run["path"])
             print(f"pad: {tokenizer.pad_token_id}, eos: {tokenizer.eos_token_id}")
             # args.batch_size
             # args.max_length

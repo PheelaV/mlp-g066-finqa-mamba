@@ -144,6 +144,7 @@ def main(args):
         neg_filter_result = bool(filter_regex_neg.search(run_name))
         if not pos_filter_result or neg_filter_result:
             print(f"[filtered out] {run_name=}, pos:{not pos_filter_result}, neg: {neg_filter_result}")
+            run_info.pop(run_name)
             continue
         filtered_counter += 1
         print(f"model_name: {matched_run['model_name']};run_name: {run_name};max_len: {matched_run['max_len']}; path_exists: {os.path.exists(matched_run['path'])}")

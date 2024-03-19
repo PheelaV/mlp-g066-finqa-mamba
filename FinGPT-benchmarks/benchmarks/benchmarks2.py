@@ -301,6 +301,9 @@ def main(args):
                         test_ner(func_args, model, tokenizer)
                     else:
                         raise ValueError("undefined dataset.")
+                    
+        if not args.dry_run and (args.lm_eval or args.fin_eval):
+            wandb_run.finish()
 
         
     print("*" * 30)

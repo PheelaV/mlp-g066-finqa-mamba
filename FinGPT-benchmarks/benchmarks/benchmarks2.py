@@ -4,7 +4,6 @@ from transformers.utils import logging
 # as the models have been trained with right padding
 # this thread suggests to supress the warning 
 # https://stackoverflow.com/questions/74748116/huggingface-automodelforcasuallm-decoder-only-architecture-warning-even-after
-logging.get_logger("transformers").setLevel(logging.ERROR)
 import torch
 import argparse
 import os
@@ -22,6 +21,25 @@ from finred import test_re
 from utils import parse_model_name
 from peft import PeftModel 
 import sys
+import os
+from pathlib import Path
+import re
+import wandb
+from wandb.apis.public import Run
+import lm_eval
+from lm_eval.logging_utils import WandbLogger
+
+from collections import namedtuple
+
+
+fake_args = namedtuple(
+    "args",
+    ["batch_size", "max_length", "logging"],
+)
+# args.batch_size
+# args.max_length
+
+logging.get_logger("transformers").setLevel(logging.ERROR)
 
 # from mamba_ssm.models.mixer_seq_simple import MambaLMHeadModel
 
@@ -42,134 +60,209 @@ def get_tokenizer(args, model_name):
     return tokenizer
 
 
+
+# Specify the base directory to search in
+base_directory = "~/repos/mlp/training/finetuned_models" 
+
+
+def get_name(input_string):
+    # Define the regular expression pattern
+    pattern = re.compile(r"((?:mamba|pythia)_(?:s|ms|m|l)_(?:mt\+|mt|mqsq)_\d(?:_b)?(?:_mt_\d)?)[\d_]+$")
+    
+    # Search for a match in the input string
+    match = pattern.search(input_string)
+    
+    # If a match is found, return the captured group
+    if match:
+        return match.group(1)  # Return the first (and only) capturing group
+    else:
+        return None
+
+def ls_models(base_path):
+    directories_info = {}
+    
+    # Regular expression to match 'checkpoint-XXXX' folders
+    checkpoint_regex = re.compile(r'checkpoint-(\d{4})$')
+    
+    for entry in os.listdir(base_path):
+        full_path = os.path.join(base_path, entry)
+        if os.path.isdir(full_path):
+            final_best_path = os.path.join(full_path, 'final-best')
+            adapter_config_path = os.path.join(full_path, 'adapter_config.json')
+            safetensors_files = [f for f in os.listdir(full_path) if f.endswith('.safetensors')]
+            
+            # Check for 'final-best' directory
+            if os.path.exists(final_best_path):
+                directories_info[entry] = final_best_path
+            # Check for 'adapter_config.json' or any '.safetensors' files
+            elif os.path.exists(adapter_config_path) or safetensors_files:
+                directories_info[entry] = full_path
+            else:
+                # Search for checkpoint directories
+                checkpoints = [d for d in os.listdir(full_path) if os.path.isdir(os.path.join(full_path, d)) and checkpoint_regex.match(d)]
+                if checkpoints:
+                    # Find the checkpoint folder with the highest number
+                    highest_checkpoint = max(checkpoints, key=lambda x: int(checkpoint_regex.match(x).group(1)))
+                    highest_checkpoint_path = os.path.join(full_path, highest_checkpoint)
+                    directories_info[entry] = highest_checkpoint_path
+                    
+    return directories_info
+
+
 def main(args):
     
-    # TODO needs a look at
-    run_id = args.base_model
-    if args.peft_model:
-        run_id += f"_peft_{args.peft_model.replace('/', '_')}"
-    if args.logging:
-        import wandb
+    run_info = {k: {"path": v} for k, v in ls_models(base_directory).items()}
 
-        config = {}
-        config.update(vars(args))
-        wandb.init(
-            project="mlp-g066-benchmarks",
-            name=args.run_name if args.run_name is not None else run_id,
-            config=config,
-            # dir=args.working_dir,
-            group=args.run_name if args.run_name is not None else run_id,
-        )
-    else:
-         os.environ['WANDB_DISABLED'] = 'true'
+    api = wandb.Api()
+    runs = api.runs("mlp-24-g066/mlp-g066")
+
+    filter = args.pos_filter
+    negative_filter = args.neg_filter
+
+    positive_filter = f".*{filter}.*"
+    filter_regex_pos = re.compile(positive_filter)
+    filter_regex_neg = re.compile(negative_filter)
+    # filter_regex.search
+
+    filter_pos_total = sum(1 for r in runs if not filter_regex_pos.match(r.name))
+    filter_neg_total = sum(1 for r in runs if not filter_regex_neg.match(r.name))
+    find_counter = 0
+    filtered_counter = 0
+    filtered_runs = {}
+    for r in runs:
+        p = Path(r.config["output_dir"])
+        run_name = p.name
+        if run_name not in run_info:
+            print(f"[not found] {run_name}")
+            continue
+        matched_run = run_info[run_name]
+        run_info[run_name]["max_len"] = r.summary['max_len']
+        run_info[run_name]["model_name"] = get_name(run_name)
+        find_counter += 1
+        if not filter_regex_pos.match(run_name) or filter_regex_neg.match(run_name):
+            print(f"[filtered out] {run_name=}")
+            continue
+        filtered_counter += 1
+        filtered_runs[run_name] = matched_run
+        print(f"model_name: {matched_run['model_name']};run_name: {run_name};max_len: {matched_run['max_len']}; path_exists: {os.path.exists(matched_run['path'])}")
+    print(f"total: {len(run_info)}; found {find_counter}; negative filter{filter_neg_total}; positive filter {filter_pos_total}; total included {filtered_counter}")
+    
+    if args.dry_run:
+        return
+    
+    for run_name, run in run_info.items():
+        wandb.summary["model_name"] = run["model_name"]
+        # if args.peft_model:
+        #     run_name += f"_peft_{args.peft_model.replace('/', '_')}"
+        if args.logging:
+            import wandb
+            config = {}
+            config.update(vars(args))
+            wandb.init(
+                project="mlp-g066-benchmarks2",
+                name= run_name,
+                config=config,
+                group= run_name,
+            )
+        else:
+            os.environ['WANDB_DISABLED'] = 'true'
+            
+        print(f"Running for {run_name}...")
         
-    print(f"Running for {run_id}...")
-
-    if args.force_use_model:
-        model_name = args.base_model
-    elif args.from_remote:
-        model_name = parse_model_name(args.base_model, args.from_remote)
-    else:
-        model_name = "../" + parse_model_name(args.base_model)
-
-    device = (
-        torch.device("cuda")
-        if torch.cuda.is_available()
-        else torch.device("mps")
-        if torch.backends.mps.is_available()
-        else torch.device("cpu")
-    )
-    if "mamba" in model_name:
-        model = MambaForCausalLM.from_pretrained(model_name)
-        model = model.to(device)
-    else:
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            # trust_remote_code= True if not args.force_use_model else None,
-            # load_in_8bit=True
-            device=device,
-            # dtype=torch.bfloat16
+        results = lm_eval.simple_evaluate(
+            model="hf",
+            model_args=f"pretrained={run['path']},trust_remote_code=True",
+            # tasks="arc_challenge,arc_easy,lambada,hallaswag,piqa,winogrande",
+            tasks=args.task,
+            log_samples=True,
         )
-    model.eval()
 
-    if args.peft_model is not None:
-        base_model = model
-        model = PeftModel.from_pretrained(base_model, args.peft_model, device_map="auto")
+        wandb_logger = WandbLogger(
+            project="lm-eval-harness-integration", job_type="eval"
+        )  # or empty if wandb.init(...) already called before
+        wandb_logger.post_init(results)
+        wandb_logger.log_eval_result()
+        wandb_logger.log_eval_samples(results["samples"])
 
-    model = model.eval()
-    # model.model_parallel = True
 
-    tokenizer = get_tokenizer(args, model_name)
-    # tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
-    # tokenizer.pad_token_id = tokenizer.eos_token_id
-    # tokenizer.padding_side = "left"
-    # if args.base_model == "qwen":
-    #     tokenizer.eos_token_id = tokenizer.convert_tokens_to_ids("<|endoftext|>")
-    #     tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids("<|extra_0|>")
-    # if not tokenizer.pad_token or tokenizer.pad_token_id == tokenizer.eos_token_id:
-    #     tokenizer.add_special_tokens({"pad_token": "[PAD]"})
-    #     model.resize_token_embeddings(len(tokenizer))
+        # if args.force_use_model:
+        #     model_name = args.base_model
+        # elif args.from_remote:
+        #     model_name = parse_model_name(args.base_model, args.from_remote)
+        # else:
+        #     model_name = "../" + parse_model_name(args.base_model)
 
-    print(f"pad: {tokenizer.pad_token_id}, eos: {tokenizer.eos_token_id}")
+        device = (
+            torch.device("cuda")
+            if torch.cuda.is_available()
+            else torch.device("mps")
+            if torch.backends.mps.is_available()
+            else torch.device("cpu")
+        )
+        if "mamba" in run["model_name"]:
+            model = MambaForCausalLM.from_pretrained(run["path"])
+        else:
+            model = AutoModelForCausalLM.from_pretrained(run["path"])
+        model = model.to(device)
+        model.eval()
 
-    # peft_config = LoraConfig(
-    #     task_type=TaskType.CAUSAL_LM,
-    #     inference_mode=False,
-    #     r=8,
-    #     lora_alpha=32,
-    #     lora_dropout=0.1,
-    #     target_modules=lora_module_dict[args.base_model],
-    #     bias='none',
-    # )
-    # model = get_peft_model(model, peft_config)
-    # model.load_state_dict(torch.load(args.peft_model + '/pytorch_model.bin'))
+        # if args.peft_model is not None:
+        #     base_model = model
+        #     model = PeftModel.from_pretrained(base_model, args.peft_model, device_map="auto")
 
-    # uncomment when using peft!
-    # model = PeftModel.from_pretrained(model, args.peft_model)
-    # model = get_peft_model(model, peft_config)
+        model = model.eval()
+        # model.model_parallel = True
 
-    wandb.summary["model"] = args.base_model
+        tokenizer = get_tokenizer(args, run["path"])
+        print(f"pad: {tokenizer.pad_token_id}, eos: {tokenizer.eos_token_id}")
+        
+        
+        func_args = fake_args(32 * args.batch_factor, run["max_len"], args.logging)
 
-    with torch.no_grad():
-        for data in args.dataset.split(","):
-            if data == "fpb":
-                _, metrics = test_fpb(args, model, tokenizer)
-                log_cls_metrics(args, data, metrics)
-            elif data == "fpb_mlt":
-                _, template_metrics = test_fpb_mlt(args, model, tokenizer)
-                for i, metrics in enumerate(template_metrics):
-                    log_cls_metrics(metrics, data, i)
-            elif data == "fiqa":
-                _, metrics = test_fiqa(args, model, tokenizer)
-                log_cls_metrics(args, data, metrics)
-            elif data == "fiqa_mlt":
-                _, template_metrics = test_fiqa_mlt(args, model, tokenizer)
-                for i, metrics in enumerate():
-                    log_cls_metrics(args, data, metrics, i)
-            elif data == "tfns":
-                _, metrics = test_tfns(args, model, tokenizer)
-                log_cls_metrics(args, data, metrics)
-            elif data == "nwgi":
-                _, metrics = test_nwgi(args, model, tokenizer)
-                log_cls_metrics(args, data, metrics)
-            elif data == "convfinqa":
-                _, acc = test_convfinqa(args, model, tokenizer)
-                wandb.summary[f"{data}_acc"] = acc
-            elif data == "fineval":
-                _, acc = test_fineval(args, model, tokenizer)
-                wandb.summary[f"{data}_acc"] = acc
-            elif data == "re":
-                metrics = test_re(args, model, tokenizer)
-                log_what_is_this(args, data, metrics)
-            # These two need to be looked at if we are to use them...
-            elif data == "headline":
-                test_headline(args, model, tokenizer)
-            elif data == "ner":
-                test_ner(args, model, tokenizer)
-            else:
-                raise ValueError("undefined dataset.")
+    # args.batch_size
+    # args.max_length
+        with torch.no_grad():
+            for data in args.dataset.split(","):
+                if data == "fpb":
+                    _, metrics = test_fpb(func_args, model, tokenizer)
+                    log_cls_metrics(func_args, data, metrics)
+                elif data == "fpb_mlt":
+                    _, template_metrics = test_fpb_mlt(func_args, model, tokenizer)
+                    for i, metrics in enumerate(template_metrics):
+                        log_cls_metrics(metrics, data, i)
+                elif data == "fiqa":
+                    _, metrics = test_fiqa(func_args, model, tokenizer)
+                    log_cls_metrics(func_args, data, metrics)
+                elif data == "fiqa_mlt":
+                    _, template_metrics = test_fiqa_mlt(func_args, model, tokenizer)
+                    for i, metrics in enumerate():
+                        log_cls_metrics(func_args, data, metrics, i)
+                elif data == "tfns":
+                    _, metrics = test_tfns(func_args, model, tokenizer)
+                    log_cls_metrics(func_args, data, metrics)
+                elif data == "nwgi":
+                    _, metrics = test_nwgi(func_args, model, tokenizer)
+                    log_cls_metrics(func_args, data, metrics)
+                elif data == "convfinqa":
+                    _, acc = test_convfinqa(func_args, model, tokenizer)
+                    wandb.summary[f"{data}_acc"] = acc
+                    wandb.log({f"{data}_acc": acc})
+                elif data == "fineval":
+                    _, acc = test_fineval(func_args, model, tokenizer)
+                    wandb.summary[f"{data}_acc"] = acc
+                    wandb.log({f"{data}_acc": acc})
+                elif data == "re":
+                    metrics = test_re(func_args, model, tokenizer)
+                    log_what_is_this(func_args, data, metrics)
+                # These two need to be looked at if we are to use them...
+                elif data == "headline":
+                    test_headline(func_args, model, tokenizer)
+                elif data == "ner":
+                    test_ner(func_args, model, tokenizer)
+                else:
+                    raise ValueError("undefined dataset.")
 
-    print("Evaluation Ends.")
+        print("Evaluation Ends.")
 
 
 def log_cls_metrics(args, data, metrics: ClsMetrics, index=None):
@@ -185,6 +278,10 @@ def log_cls_metrics(args, data, metrics: ClsMetrics, index=None):
     wandb.summary[f"{data}_f1_macro" + postfix] = f1_macro
     wandb.summary[f"{data}_f1_micro" + postfix] = f1_micro
     wandb.summary[f"{data}_f1_weighted" + postfix] = f1_weighted
+    wandb.log({f"{data}_acc" + postfix: acc})
+    wandb.log({f"{data}_f1_macro" + postfix: f1_macro})
+    wandb.log({f"{data}_f1_micro" + postfix: f1_micro})
+    wandb.log({f"{data}_f1_weighted" + postfix: f1_weighted})
 
 
 def log_what_is_this(args, metrics, data):
@@ -193,6 +290,12 @@ def log_what_is_this(args, metrics, data):
     
     import wandb
     (precision, recall, f1_score, precision_re, recall_re, f1_score_re) = metrics
+    wandb.log({f"{data}_precision": precision})
+    wandb.log({f"{data}_recall": recall})
+    wandb.log({f"{data}_f1_score": f1_score})
+    wandb.log({f"{data}_precision_re": precision_re})
+    wandb.log({f"{data}_recall_re": recall_re})
+    wandb.log({f"{data}_f1_score_re": f1_score_re})
     wandb.summary[f"{data}_precision"] = precision
     wandb.summary[f"{data}_recall"] = recall
     wandb.summary[f"{data}_f1_score"] = f1_score
@@ -200,70 +303,52 @@ def log_what_is_this(args, metrics, data):
     wandb.summary[f"{data}_recall_re"] = recall_re
     wandb.summary[f"{data}_f1_score_re"] = f1_score_re
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", required=True, type=str)
     parser.add_argument(
-        "--base_model",
+        "--base_directory",
         required=True,
+        default=base_directory,
         type=str,
-        # choices=[
-        #     "chatglm2",
-        #     "llama2",
-        #     "llama2-13b",
-        #     "llama2-13b-nr",
-        #     "baichuan",
-        #     "falcon",
-        #     "internlm",
-        #     "qwen",
-        #     "mpt",
-        #     "bloom",
-        #     "pythia",
-        #     ""
-        # ],
-        help=", ".join([
-            "chatglm2",
-            "llama2",
-            "llama2-13b",
-            "llama2-13b-nr",
-            "baichuan",
-            "falcon",
-            "internlm",
-            "qwen",
-            "mpt",
-            "bloom",
-            "pythia",
-        ]),
     )
-    parser.add_argument("--peft_model", required=False, type=str)
-    parser.add_argument("--run_name", default=None, type=str) 
-    parser.add_argument("--max_length", default=512, type=int)
     parser.add_argument(
-        "--lora",
-        action=argparse.BooleanOptionalAction,
-        type=bool,
-        help="Whether to use LoRA config for peft model (assumes a default configuration)",
+        "--pos_filter",
+        default="",
+        type=str,
+    )
+    parser.add_argument(
+        "--neg_filter",
+        default="",
+        type=str,
+    )
+    parser.add_argument(
+        "--task",
+        default="arc_challenge,arc_easy,lambada,hallaswag,piqa,winogrande",
+        type=str,
+    )
+    parser.add_argument(
+        "--batch_factor",
+        default=1,
+        type=int,
     )
     parser.add_argument(
         "--logging",
         action=argparse.BooleanOptionalAction,
         type=bool,
         default=True,
-        help="Whether to log or not)",
+        help="Whether to log or not",
     )
     parser.add_argument(
-        "--batch_size", default=4, type=int, help="The train batch size per device"
+        "--dry_run",
+        action=argparse.BooleanOptionalAction,
+        type=bool,
+        default=False,
+        help="List what will be processed and end",
     )
     parser.add_argument("--instruct_template", default="default")
     parser.add_argument(
         "--from_remote", action=argparse.BooleanOptionalAction, default=False
-    )
-    parser.add_argument(
-        "--force_use_model",
-        action=argparse.BooleanOptionalAction,
-        default=False,
-        help="Force use of the model, this is a temporary measure...",
     )
 
     args = parser.parse_args()

@@ -149,8 +149,9 @@ def main(args):
         filtered_counter += 1
         print(f"model_name: {matched_run['model_name']};run_name: {run_name};max_len: {matched_run['max_len']}; path_exists: {os.path.exists(matched_run['path'])}")
         if not args.dry_run:
-            formatted_time = datetime.now().strftime("%Y_%m_%d_%H%M")
+            formatted_time = datetime.datetime.now().strftime("%Y_%m_%d_%H%M")
             r.summary["benchmark_run"] = formatted_time
+            r.update()
     print(f"total: {len(run_info)}; found {find_counter}; negative filter{filter_neg_total}; positive filter {filter_pos_total}; total included {filtered_counter}")
     
     print("*" * 50)

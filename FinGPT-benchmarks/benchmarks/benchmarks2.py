@@ -149,19 +149,10 @@ def main(args):
     
     print("*" * 50)
     for run_name, run in run_info.items():
-        wandb.summary["model_name"] = run["model_name"]
         # if args.peft_model:
         #     run_name += f"_peft_{args.peft_model.replace('/', '_')}"
         # if args.logging:
-        import wandb
-        config = {}
-        config.update(vars(args))
-        wandb.init(
-            project="mlp-g066-benchmarks2",
-            name= run_name,
-            config=config,
-            group= run_name,
-        )
+
         # else:
         #     os.environ['WANDB_DISABLED'] = 'true'
             
@@ -179,6 +170,17 @@ def main(args):
         if args.dry_run:
             continue
         
+        import wandb
+        config = {}
+        config.update(vars(args))
+        wandb_run = wandb.init(
+            project="mlp-g066-benchmarks2",
+            name= run_name,
+            config=config,
+            group= run_name,
+        )
+        
+        wandb.summary["model_name"] = run["model_name"]
         results = lm_eval.simple_evaluate(
             model="hf",
             model_args=f"pretrained={run['path']},trust_remote_code=True",
@@ -272,8 +274,9 @@ def main(args):
                 else:
                     raise ValueError("undefined dataset.")
                 
-        print("*" * 30)
-        print("Evaluation Ends.")
+        wandb_run.finish()
+    print("*" * 30)
+    print("Evaluation Ends.")
 
 
 def log_cls_metrics(args, data, metrics: ClsMetrics, index=None):

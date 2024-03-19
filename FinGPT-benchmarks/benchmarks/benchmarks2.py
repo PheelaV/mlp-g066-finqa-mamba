@@ -112,7 +112,7 @@ def ls_models(base_path):
 def main(args):
     
     run_info = {k: {"path": v} for k, v in ls_models(args.base_directory).items()}
-
+    import wandb
     api = wandb.Api()
     runs = api.runs("mlp-24-g066/mlp-g066")
 
@@ -152,18 +152,18 @@ def main(args):
         wandb.summary["model_name"] = run["model_name"]
         # if args.peft_model:
         #     run_name += f"_peft_{args.peft_model.replace('/', '_')}"
-        if args.logging:
-            import wandb
-            config = {}
-            config.update(vars(args))
-            wandb.init(
-                project="mlp-g066-benchmarks2",
-                name= run_name,
-                config=config,
-                group= run_name,
-            )
-        else:
-            os.environ['WANDB_DISABLED'] = 'true'
+        # if args.logging:
+        import wandb
+        config = {}
+        config.update(vars(args))
+        wandb.init(
+            project="mlp-g066-benchmarks2",
+            name= run_name,
+            config=config,
+            group= run_name,
+        )
+        # else:
+        #     os.environ['WANDB_DISABLED'] = 'true'
             
         print("#" * 30)
         print("#" * 30)

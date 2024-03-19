@@ -35,7 +35,7 @@ from collections import namedtuple
 
 fake_args = namedtuple(
     "args",
-    ["batch_size", "max_length", "logging"],
+    ["batch_size", "max_length", "logging", "base_name"],
 )
 # args.batch_size
 # args.max_length
@@ -255,10 +255,10 @@ def main(args):
             model = model.eval()
             # model.model_parallel = True
 
+            func_args = fake_args(32 * args.batch_factor, run["max_len"], args.logging, run["model_name"])
+
             tokenizer = get_tokenizer(args, run["path"])
             print(f"pad: {tokenizer.pad_token_id}, eos: {tokenizer.eos_token_id}")
-
-            func_args = fake_args(32 * args.batch_factor, run["max_len"], args.logging)
             # args.batch_size
             # args.max_length
             with torch.no_grad():

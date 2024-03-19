@@ -85,7 +85,7 @@ def ls_models(base_path):
     directories_info = {}
 
     # Regular expression to match 'checkpoint-XXXX' folders
-    checkpoint_regex = re.compile(r"checkpoint-(\d{4})$")
+    checkpoint_regex = re.compile(r"checkpoint-(\d+)$")
 
     for entry in os.listdir(base_path):
         full_path = os.path.join(base_path, entry)
@@ -120,7 +120,6 @@ def ls_models(base_path):
                         full_path, highest_checkpoint
                     )
                     directories_info[entry] = highest_checkpoint_path
-
     return directories_info
 
 

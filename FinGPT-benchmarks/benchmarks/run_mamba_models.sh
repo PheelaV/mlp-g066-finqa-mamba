@@ -13,7 +13,7 @@ models_dir="../../training/test_models/mamba"
 # --force_use_model \
 # --batch_size 32 \
 # --max_length 512 \
-# --base_model "${models_dir}/mamba-big_mamba_l_mt_0_2024_03_16_1625/checkpoint-20691/"
+# --base_model "${models_dir}/mamba-big_mamba_l_mt_0_2024_03_16_1625/"
 
 ## MEDIUM
 
@@ -31,7 +31,7 @@ models_dir="../../training/test_models/mamba"
 # --force_use_model \
 # --batch_size 32 \
 # --max_length 512 \
-# --base_model "${models_dir}/mamba-medium_mamba_m_mt_1_2024_03_16_0538/checkpoint-3458/"
+# --base_model "${models_dir}/mamba-medium_mamba_m_mt_1_2024_03_16_0538/"
 
 # # mamba-medium_mamba_m_mt_2_2024_03_16_0258
 # python benchmarks.py \
@@ -39,7 +39,24 @@ models_dir="../../training/test_models/mamba"
 # --force_use_model \
 # --batch_size 32 \
 # --max_length 512 \
-# --base_model "${models_dir}/mamba-medium_mamba_m_mt_2_2024_03_16_0258/checkpoint-3458/"
+# --base_model "${models_dir}/mamba-medium_mamba_m_mt_2_2024_03_16_0258/"
+
+# mamba-medium_mamba_m_mqsq_1_b_2024_03_17_0501_mamba_m_mqsq_1_b_mt_0_2024_03_17_1458
+python benchmarks.py \
+--dataset fpb,fiqa,tfns,nwgi \
+--force_use_model \
+--batch_size 128 \
+--max_length 512 \
+--base_model "${models_dir}/mamba-medium_mamba_m_mqsq_1_b_2024_03_17_0501_mamba_m_mqsq_1_b_mt_0_2024_03_17_1458/"
+
+# mamba-medium_mamba_m_mqsq_1_b_2024_03_17_0501_mamba_m_mqsq_1_b_mt_2_2024_03_17_1722
+python benchmarks.py \
+--dataset fpb,fiqa,tfns,nwgi \
+--force_use_model \
+--batch_size 128 \
+--max_length 512 \
+--base_model "${models_dir}/mamba-medium_mamba_m_mqsq_1_b_2024_03_17_0501_mamba_m_mqsq_1_b_mt_2_2024_03_17_1722/final-best/"
+
 
 ## SMALL
 

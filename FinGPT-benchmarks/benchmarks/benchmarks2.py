@@ -139,8 +139,10 @@ def main(args):
         run_info[run_name]["max_len"] = r.summary['max_len']
         run_info[run_name]["model_name"] = get_name(run_name)
         find_counter += 1
-        if not filter_regex_pos.match(run_name) or filter_regex_neg.match(run_name):
-            print(f"[filtered out] {run_name=}")
+        pos_filter_result = bool(filter_regex_pos.search(run_name))
+        neg_filter_result = bool(filter_regex_neg.search(run_name))
+        if not pos_filter_result or neg_filter_result:
+            print(f"[filtered out] {run_name=}, pos:{not pos_filter_result}, neg: {neg_filter_result}")
             continue
         filtered_counter += 1
         filtered_runs[run_name] = matched_run
@@ -333,7 +335,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--neg_filter",
-        default="",
+        default="^$",
         type=str,
     )
     parser.add_argument(

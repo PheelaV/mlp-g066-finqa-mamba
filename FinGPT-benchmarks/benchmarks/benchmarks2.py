@@ -192,7 +192,7 @@ def main(args):
         results = lm_eval.simple_evaluate(
             model="hf",
             model_args=f"pretrained={run['path']},trust_remote_code=True",
-            # tasks="arc_challenge,arc_easy,lambada,hallaswag,piqa,winogrande",
+            # tasks="arc_challenge,arc_easy,lambada,hellaswag,piqa,winogrande",
             tasks=args.task.split(","),
             log_samples=True,
         )
@@ -346,7 +346,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--task",
-        default="arc_challenge,arc_easy,lambada,hallaswag,piqa,winogrande",
+        default="arc_challenge,arc_easy,lambada,hellaswag,piqa,winogrande",
         type=str,
     )
     parser.add_argument(

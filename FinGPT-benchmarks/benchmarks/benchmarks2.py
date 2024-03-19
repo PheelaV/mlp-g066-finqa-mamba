@@ -186,6 +186,7 @@ def main(args):
         )
         
         wandb.summary["model_name"] = run["model_name"]
+        wandb.summary["max_len"] = run["max_len"]
         results = lm_eval.simple_evaluate(
             model="hf",
             model_args=f"pretrained={run['path']},trust_remote_code=True",

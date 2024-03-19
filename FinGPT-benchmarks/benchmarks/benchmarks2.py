@@ -147,9 +147,7 @@ def main(args):
         print(f"model_name: {matched_run['model_name']};run_name: {run_name};max_len: {matched_run['max_len']}; path_exists: {os.path.exists(matched_run['path'])}")
     print(f"total: {len(run_info)}; found {find_counter}; negative filter{filter_neg_total}; positive filter {filter_pos_total}; total included {filtered_counter}")
     
-    if args.dry_run:
-        return
-    
+    print("*" * 50)
     for run_name, run in run_info.items():
         wandb.summary["model_name"] = run["model_name"]
         # if args.peft_model:
@@ -167,7 +165,19 @@ def main(args):
         else:
             os.environ['WANDB_DISABLED'] = 'true'
             
+        print("#" * 30)
+        print("#" * 30)
         print(f"Running for {run_name}...")
+        print(f"Path: {run['path']}")
+        print(f"Task (GeneralEval): {args.task}")
+        print(f"Dataset (FinEval): {args.dataset}")
+        print(f"Batch factor: {args.batch_factor}")
+        print("#" * 30)
+        print("#" * 30)
+
+        
+        if args.dry_run:
+            continue
         
         results = lm_eval.simple_evaluate(
             model="hf",
@@ -261,7 +271,8 @@ def main(args):
                     test_ner(func_args, model, tokenizer)
                 else:
                     raise ValueError("undefined dataset.")
-
+                
+        print("*" * 30)
         print("Evaluation Ends.")
 
 

@@ -143,6 +143,7 @@ def main(args):
     filter_neg_total = sum(1 for r in runs if not filter_regex_neg.match(r.name))
     find_counter = 0
     filtered_counter = 0
+    announcement = ""
     for r in runs:
         r: Run = r
         p = Path(r.config["output_dir"])
@@ -170,9 +171,8 @@ def main(args):
             formatted_time = datetime.datetime.now().strftime("%Y_%m_%d_%H%M")
             r.summary["benchmark_run"] = formatted_time
             r.update()
-    print(
-        f"total: {len(run_info)}; found {find_counter}; negative filter{filter_neg_total}; positive filter {filter_pos_total}; total included {filtered_counter}"
-    )
+    announcement = f"total: {len(run_info)}; found {find_counter}; negative filter{filter_neg_total}; positive filter {filter_pos_total}; total included {filtered_counter}"
+    print(announcement)
 
     print("*" * 50)
     for run_name, run in run_info.items():
@@ -195,7 +195,7 @@ def main(args):
 
         if args.dry_run:
             continue
-        
+
         if not args.dry_run and (args.lm_eval or args.fin_eval):
             wandb_run = wandb.init(
                 project="mlp-g066-benchmarks2",
@@ -254,12 +254,14 @@ def main(args):
         model = model.eval()
         # model.model_parallel = True
         # exit()
-        func_args = fake_args(32 * args.batch_factor, run["max_len"], args.logging, run["model_name"])
+        func_args = fake_args(
+            32 * args.batch_factor, run["max_len"], args.logging, run["model_name"]
+        )
 
         tokenizer = get_tokenizer(func_args, run["path"])
         print(f"pad: {tokenizer.pad_token_id}, eos: {tokenizer.eos_token_id}")
-            # args.batch_size
-            # args.max_length
+        # args.batch_size
+        # args.max_length
         if args.fin_eval:
             with torch.no_grad():
                 for data in args.dataset.split(","):
@@ -301,12 +303,13 @@ def main(args):
                         test_ner(func_args, model, tokenizer)
                     else:
                         raise ValueError("undefined dataset.")
-                    
+
         if not args.dry_run and (args.lm_eval or args.fin_eval):
             wandb_run.finish()
 
-        
     print("*" * 30)
+    print(announcement)
+
     print("Evaluation Ends.")
 
 

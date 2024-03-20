@@ -192,54 +192,6 @@ def main(args):
         print("#" * 30)
         print("#" * 30)
 
-        # if args.dry_run:
-        #     continue
-
-        if not args.dry_run and (args.lm_eval or args.fin_eval):
-            wandb_run = wandb.init(
-                project="mlp-g066-benchmarks2",
-                name=run_name,
-                group=run_name,
-            )
-
-        if args.lm_eval and not args.dry_run:
-            import wandb
-
-            config = {}
-            config.update(vars(args))
-
-            wandb.summary["model_name"] = run["model_name"]
-            wandb.summary["max_len"] = run["max_len"]
-            
-            try:
-                results = lm_eval.simple_evaluate(
-                    model="hf",
-                    model_args=f"pretrained={run['path']},trust_remote_code=True",
-                    # tasks="arc_challenge,arc_easy,lambada,hellaswag,piqa,winogrande",
-                    tasks=args.task.split(","),
-                    log_samples=True,
-                )
-            except Exception as e:
-                print(f"!Error!: {e}")
-                wandb.summary["lm_eval_error"] = str(e)
-                continue
-
-            wandb_logger = WandbLogger(
-                project="lm-eval-harness-integration", job_type="eval"
-            )  # or empty if wandb.init(...) already called before
-            wandb_logger.post_init(results)
-            wandb_logger.log_eval_result()
-            wandb_logger.log_eval_samples(results["samples"])
-
-            # if args.force_use_model:
-            #     model_name = args.base_model
-            # elif args.from_remote:
-            #     model_name = parse_model_name(args.base_model, args.from_remote)
-            # else:
-            #     model_name = "../" + parse_model_name(args.base_model)
-        elif args.lm_eval:
-            print("[warning] LM Eval is disabled.")
-
         if not args.dry_run:
             device = (
                 torch.device("cuda")
@@ -319,7 +271,54 @@ def main(args):
             print("[warning] FinEval is disabled.")
 
         if not args.dry_run and (args.lm_eval or args.fin_eval):
+            wandb_run = wandb.init(
+                project="mlp-g066-benchmarks2",
+                name=run_name,
+                group=run_name,
+            )
+
+        if args.lm_eval and not args.dry_run:
+            import wandb
+
+            config = {}
+            config.update(vars(args))
+
+            wandb.summary["model_name"] = run["model_name"]
+            wandb.summary["max_len"] = run["max_len"]
+            
+            try:
+                results = lm_eval.simple_evaluate(
+                    model="hf",
+                    model_args=f"pretrained={run['path']},trust_remote_code=True",
+                    # tasks="arc_challenge,arc_easy,lambada,hellaswag,piqa,winogrande",
+                    tasks=args.task.split(","),
+                    log_samples=True,
+                )
+            except Exception as e:
+                print(f"!Error!: {e}")
+                wandb.summary["lm_eval_error"] = str(e)
+                continue
+
+            wandb_logger = WandbLogger(
+                project="lm-eval-harness-integration", job_type="eval"
+            )  # or empty if wandb.init(...) already called before
+            wandb_logger.post_init(results)
+            wandb_logger.log_eval_result()
+            wandb_logger.log_eval_samples(results["samples"])
+
+            # if args.force_use_model:
+            #     model_name = args.base_model
+            # elif args.from_remote:
+            #     model_name = parse_model_name(args.base_model, args.from_remote)
+            # else:
+            #     model_name = "../" + parse_model_name(args.base_model)
+        elif args.lm_eval:
+            print("[warning] LM Eval is disabled.")
+            
+        if not args.dry_run and (args.lm_eval or args.fin_eval):
             wandb_run.finish()
+        # if args.dry_run:
+        #     continue
 
     print("*" * 30)
     print(announcement)

@@ -231,7 +231,7 @@ def main(args):
         if args.fin_eval and not args.dry_run:
             with torch.no_grad():
                 for data in args.dataset.split(","):
-                    try:
+                    # try:
                         if data == "fpb":
                             _, metrics = test_fpb(func_args, model, tokenizer)
                             log_cls_metrics(func_args, data, metrics)
@@ -270,9 +270,9 @@ def main(args):
                             test_ner(func_args, model, tokenizer)
                         else:
                             raise ValueError("undefined dataset.")
-                    except Exception as e:
-                        print(f"!Error!: {e}")
-                        wandb.summary[f"fin_eval_{data}_error"] = str(e)
+                    # except Exception as e:
+                    #     print(f"!Error!: {e}")
+                    #     wandb.summary[f"fin_eval_{data}_error"] = str(e)
         elif args.fin_eval:
             print("[warning] FinEval is disabled.")
 

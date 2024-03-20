@@ -192,8 +192,8 @@ def main(args):
         print("#" * 30)
         print("#" * 30)
 
-        if args.dry_run:
-            continue
+        # if args.dry_run:
+        #     continue
 
         if not args.dry_run and (args.lm_eval or args.fin_eval):
             wandb_run = wandb.init(
@@ -202,7 +202,7 @@ def main(args):
                 group=run_name,
             )
 
-        if args.lm_eval:
+        if args.lm_eval and not args.dry_run:
             import wandb
 
             config = {}
@@ -237,37 +237,40 @@ def main(args):
             #     model_name = parse_model_name(args.base_model, args.from_remote)
             # else:
             #     model_name = "../" + parse_model_name(args.base_model)
+        elif args.lm_eval:
+            print("[warning] LM Eval is disabled.")
 
-        device = (
-            torch.device("cuda")
-            if torch.cuda.is_available()
-            else torch.device("mps")
-            if torch.backends.mps.is_available()
-            else torch.device("cpu")
-        )
-        if "mamba" in run["model_name"]:
-            model = MambaForCausalLM.from_pretrained(run["path"])
-        else:
-            model = AutoModelForCausalLM.from_pretrained(run["path"])
-        model = model.to(device)
-        model.eval()
+        if not args.dry_run:
+            device = (
+                torch.device("cuda")
+                if torch.cuda.is_available()
+                else torch.device("mps")
+                if torch.backends.mps.is_available()
+                else torch.device("cpu")
+            )
+            if "mamba" in run["model_name"]:
+                model = MambaForCausalLM.from_pretrained(run["path"])
+            else:
+                model = AutoModelForCausalLM.from_pretrained(run["path"])
+            model = model.to(device)
+            model.eval()
 
-        # if args.peft_model is not None:
-        #     base_model = model
-        #     model = PeftModel.from_pretrained(base_model, args.peft_model, device_map="auto")
+            # if args.peft_model is not None:
+            #     base_model = model
+            #     model = PeftModel.from_pretrained(base_model, args.peft_model, device_map="auto")
 
-        model = model.eval()
-        # model.model_parallel = True
-        # exit()
-        func_args = fake_args(
-            32 * args.batch_factor, run["max_len"], args.logging, run["model_name"]
-        )
+            model = model.eval()
+            # model.model_parallel = True
+            # exit()
+            func_args = fake_args(
+                32 * args.batch_factor, run["max_len"], args.logging, run["model_name"]
+            )
 
-        tokenizer = get_tokenizer(func_args, run["path"])
-        print(f"pad: {tokenizer.pad_token_id}, eos: {tokenizer.eos_token_id}")
+            tokenizer = get_tokenizer(func_args, run["path"])
+            print(f"pad: {tokenizer.pad_token_id}, eos: {tokenizer.eos_token_id}")
         # args.batch_size
         # args.max_length
-        if args.fin_eval:
+        if args.fin_eval and not args.dry_run:
             with torch.no_grad():
                 for data in args.dataset.split(","):
                     try:
@@ -312,6 +315,8 @@ def main(args):
                     except Exception as e:
                         print(f"!Error!: {e}")
                         wandb.summary[f"fin_eval_{data}_error"] = str(e)
+        elif args.fin_eval:
+            print("[warning] FinEval is disabled.")
 
         if not args.dry_run and (args.lm_eval or args.fin_eval):
             wandb_run.finish()

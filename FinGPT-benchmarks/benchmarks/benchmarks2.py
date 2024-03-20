@@ -191,6 +191,12 @@ def main(args):
         print(f"Batch factor: {args.batch_factor}")
         print("#" * 30)
         print("#" * 30)
+        if not args.dry_run and (args.lm_eval or args.fin_eval):
+            wandb_run = wandb.init(
+                project="mlp-g066-benchmarks2",
+                name=run_name,
+                group=run_name,
+            )
 
         if not args.dry_run:
             device = (
@@ -270,12 +276,6 @@ def main(args):
         elif args.fin_eval:
             print("[warning] FinEval is disabled.")
 
-        if not args.dry_run and (args.lm_eval or args.fin_eval):
-            wandb_run = wandb.init(
-                project="mlp-g066-benchmarks2",
-                name=run_name,
-                group=run_name,
-            )
 
         if args.lm_eval and not args.dry_run:
             import wandb

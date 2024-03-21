@@ -1,4 +1,5 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM, MambaForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM
+# MambaForCausalLM
 from transformers.utils import logging
 
 # this is for the pesky eror about padding to the left, I think that is incorrect
@@ -207,7 +208,10 @@ def main(args):
                 else torch.device("cpu")
             )
             if "mamba" in run["model_name"]:
-                model = MambaForCausalLM.from_pretrained(run["path"])
+                model = AutoModelForCausalLM.from_pretrained(run["path"])
+                # this breaks stuff for the time being, it is being fixed 
+                # https://github.com/huggingface/transformers/issues/29699
+                # model = MambaForCausalLM.from_pretrained(run["path"])
             else:
                 model = AutoModelForCausalLM.from_pretrained(run["path"])
             model = model.to(device)

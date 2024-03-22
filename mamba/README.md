@@ -1,1 +1,0 @@
-place the put the mamba setup

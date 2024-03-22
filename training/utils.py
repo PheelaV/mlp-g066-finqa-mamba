@@ -13,16 +13,6 @@ PROMPT_TEMPLATES = {"default": "Instruction: {instruction}\nInput: {input}\nAnsw
 
 # A dictionary to store the LoRA module mapping for different models.
 LORA_MODULES = {
-    # 'chatglm2': ['query_key_value'],
-    # 'falcon': ['query_key_value'],
-    # 'bloom': ['query_key_value'],
-    # 'internlm': ['q_proj', 'k_proj', 'v_proj'],
-    # 'llama2': ['q_proj', 'k_proj', 'v_proj'],
-    # 'llama2-13b': ['q_proj', 'k_proj', 'v_proj'],
-    # 'llama2-13b-nr': ['q_proj', 'k_proj', 'v_proj'],
-    # 'qwen': ["c_attn"],ythi
-    # 'mpt': ['Wqkv'],
-    # 'baichuan': ['q_proj', 'k_proj', 'v_proj'],
     "pythia": ["query_key_value"],
     "mamba": ["x_proj", "embeddings", "in_proj", "out_proj"],
 }
@@ -60,16 +50,6 @@ DATASETS_MAP = {
 }
 
 MODELS_MAP = {
-    # 'chatglm2': ('THUDM/chatglm2-6b', 'base_models/chatglm2-6b'),
-    # 'llama2': ('meta-llama/Llama-2-7b-hf', 'base_models/Llama-2-7b-hf'),
-    # 'llama2-13b': ('meta-llama/Llama-2-13b-hf', 'base_models/Llama-2-13b-hf'),
-    # 'llama2-13b-nr': ('NousResearch/Llama-2-13b-hf', 'base_models/Llama-2-13b-hf'),
-    # 'falcon': ('tiiuae/falcon-7b', 'base_models/falcon-7b'),
-    # 'internlm': ('internlm/internlm-7b', 'base_models/internlm-7b'),
-    # 'qwen': ('Qwen/Qwen-7B', 'base_models/Qwen-7B'),
-    # 'baichuan': ('baichuan-inc/Baichuan2-7B-Base', 'base_models/Baichuan2-7B-Base'),
-    # 'mpt': ('cekal/mpt-7b-peft-compatible', 'base_models/mpt-7b-peft-compatible'),
-    # 'bloom': ('bigscience/bloom-7b1', 'base_models/bloom-7b1'),
     "mamba-small": "state-spaces/mamba-130m-hf",
     "pythia-small": "EleutherAI/pythia-70m-deduped",
     "pythia-medsmall": "EleutherAI/pythia-160m-deduped",
